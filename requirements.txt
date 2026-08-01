@@ -1,12 +1,30 @@
+# ─── Base dos Dados / Google Cloud ───────────────────────────────────────────
+basedosdados>=1.7.0
+google-cloud-bigquery>=3.0.0
+db-dtypes>=1.2.0
+
+# ─── Processamento de dados ───────────────────────────────────────────────────
 pandas>=2.0.0
 pyarrow>=14.0.0
+
+# ─── Streaming ────────────────────────────────────────────────────────────────
+kafka-python>=2.0.0
+
+# ─── Qualidade de dados ───────────────────────────────────────────────────────
+great-expectations>=0.18.0
+
+# ─── Big Data (opcional — necessário para camadas Silver/Gold com Spark) ──────
 pyspark>=3.5.0
 delta-spark>=3.0.0
-great-expectations>=0.18.0
-kafka-python>=2.0.0
-requests>=2.31.0
+
+# ─── Utilitários ──────────────────────────────────────────────────────────────
 python-dotenv>=1.0.0
+requests>=2.31.0
 tqdm>=4.66.0
+
+# ─── Análise e visualização ───────────────────────────────────────────────────
 matplotlib>=3.8.0
 seaborn>=0.13.0
+
+# ─── Notebooks ────────────────────────────────────────────────────────────────
 jupyter>=1.0.0
