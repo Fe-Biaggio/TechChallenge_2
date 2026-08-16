@@ -196,9 +196,9 @@ linhagem própria (ver nota em "Arquitetura da Solução"):
   cada execução acrescenta eventos, não substitui os anteriores
 
 ### 3. Qualidade de Dados ([`quality/validacao_dados.py`](quality/validacao_dados.py))
-Valida as 3 camadas (Bronze, Silver, Gold) — 21 tabelas batch sempre, +3 de
-streaming se `04_simulacao_streaming.py` já rodou, 0 alertas na última
-execução contra os dados reais:
+Valida as 3 camadas (Bronze, Silver, Gold) — 21 tabelas batch sempre, +5 de
+streaming (2 na Bronze, 2 na Silver, 1 na Gold) se `04_simulacao_streaming.py`
+já rodou, 0 alertas na última execução contra os dados reais:
 - Completude (limiar de nulos por coluna, calibrado por tabela — nulos
   estruturais como `proporcao_aluno_nivel_*` pré-2024 não geram alerta)
 - Unicidade (duplicatas na chave primária de cada tabela)
@@ -343,7 +343,7 @@ não existem, e tudo o resto (a análise real) fica intacto.
 python quality/validacao_dados.py
 ```
 
-Valida 21 tabelas batch sempre, +3 de streaming se o passo 3 já rodou.
+Valida 21 tabelas batch sempre, +5 de streaming se o passo 3 já rodou.
 
 ### 5. Explorar via Notebooks (ordem recomendada)
 

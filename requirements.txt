@@ -11,11 +11,16 @@ pyarrow>=14.0.0
 kafka-python>=2.0.0
 
 # ─── Qualidade de dados ───────────────────────────────────────────────────────
-great-expectations>=0.18.0
+# A validação em quality/validacao_dados.py é feita em pandas puro — não
+# depende de Great Expectations. Deixado comentado como caminho de evolução
+# (ver README > Tecnologias Utilizadas > "Considerados, não usados"):
+# great-expectations>=0.18.0
 
-# ─── Big Data (opcional — necessário para camadas Silver/Gold com Spark) ──────
-pyspark>=3.5.0
-delta-spark>=3.0.0
+# ─── Big Data (não usado nesta entrega — ver README > Decisões Arquiteturais) ──
+# O volume atual (~3,87M linhas na maior tabela) roda inteiro em pandas.
+# Descomente se for necessário processar um volume que não caiba em memória:
+# pyspark>=3.5.0
+# delta-spark>=3.0.0
 
 # ─── Utilitários ──────────────────────────────────────────────────────────────
 python-dotenv>=1.0.0

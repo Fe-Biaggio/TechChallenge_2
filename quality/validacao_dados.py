@@ -75,6 +75,17 @@ REGRAS_BRONZE = {
         "obrigatorias": ["sigla", "nome", "regiao"],
         "max_pct_nulos": 0.0,
     },
+    # Linhagem de streaming (opcional — só existe se pipeline/streaming/ já rodou)
+    "streaming_indicadores": {
+        "chaves_primarias": ["id_municipio", "ano", "timestamp"],
+        "obrigatorias": ["id_municipio", "sigla_uf", "ano", "indicador_alfabetizacao"],
+        "max_pct_nulos": 0.0,
+    },
+    "streaming_metas": {
+        "chaves_primarias": ["sigla_uf", "ano", "timestamp"],
+        "obrigatorias": ["sigla_uf", "ano", "meta_percentual"],
+        "max_pct_nulos": 0.0,
+    },
 }
 
 REGRAS_SILVER = {
