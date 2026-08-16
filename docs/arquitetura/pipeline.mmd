@@ -1,0 +1,34 @@
+flowchart TD
+    subgraph Fontes["Fontes externas - Base dos Dados / INEP"]
+        BQ[("BigQuery")]
+        RAW["CSVs exportados data/raw"]
+    end
+    subgraph Batch["Ingestao Batch"]
+        ING["01_ingestao_bronze.py"]
+    end
+    subgraph Streaming["Ingestao Streaming (simulada)"]
+        PROD["producer.py"] --> CONS["consumer.py"]
+    end
+    subgraph BronzeL["Bronze"]
+        BZ[("8 tabelas Parquet")]
+    end
+    subgraph SilverL["Silver"]
+        SV["02_processamento_silver.py"] --> SVT[("tabelas limpas + integrado")]
+    end
+    subgraph GoldL["Gold"]
+        GD["03_agregacao_gold.py"] --> GDT[("3 datasets analiticos")]
+    end
+    subgraph Consumo["Consumo"]
+        DASH["Dashboards"]
+        STAT["Analises"]
+        ML["Modelos ML"]
+    end
+    BQ --> ING
+    RAW --> ING
+    ING --> BZ
+    CONS --> BZ
+    BZ --> SV
+    SVT --> GD
+    GDT --> DASH
+    GDT --> STAT
+    GDT --> ML
