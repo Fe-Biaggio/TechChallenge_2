@@ -13,6 +13,9 @@ treinamento de modelos de ML):
      da UF atingiram sua própria meta municipal
   3. evolucao_temporal — série histórica do indicador (Brasil e UF), com
      variação ano a ano
+  4. monitoramento_streaming — volume, cobertura e janela temporal dos
+     eventos de streaming processados (se pipeline/streaming/ já rodou);
+     não entra nos datasets analíticos acima, que usam só dado real do INEP
 
 Uso:
     python pipeline/batch/03_agregacao_gold.py
@@ -189,6 +192,52 @@ def construir_evolucao_temporal(anos: list = None) -> pd.DataFrame:
     return evolucao
 
 
+@timer
+def construir_monitoramento_streaming() -> pd.DataFrame:
+    """
+    Monitoramento operacional da ingestão de streaming: volume, cobertura
+    territorial e janela temporal por tópico. Não mede eventos inválidos —
+    o consumer descarta esses sem persistir (ver pipeline/streaming/consumer.py),
+    então essa métrica só existe no log da execução ao vivo, não no dado
+    persistido. Datasets vazios (Silver sem indicador_streaming/meta_streaming,
+    ou seja, streaming nunca rodou) resultam em tabela vazia — não é erro.
+    """
+    colunas = [
+        "topico", "total_eventos", "cobertura_distinta", "primeiro_evento",
+        "ultimo_evento", "janela_segundos", "eventos_por_segundo", "dt_processamento",
+    ]
+    fontes = [("indicadores", "indicador_streaming", "id_municipio"), ("metas", "meta_streaming", "sigla_uf")]
+
+    linhas = []
+    for topico, nome_tabela, col_cobertura in fontes:
+        try:
+            df = _ler_silver(nome_tabela)
+        except FileNotFoundError:
+            continue
+        if df.empty:
+            continue
+        linhas.append({
+            "topico": topico,
+            "total_eventos": len(df),
+            "cobertura_distinta": int(df[col_cobertura].nunique()),
+            "primeiro_evento": df["timestamp"].min(),
+            "ultimo_evento": df["timestamp"].max(),
+        })
+
+    if not linhas:
+        logger.warning("[Gold] monitoramento_streaming: nenhum evento de streaming encontrado na Silver — pulando")
+        return pd.DataFrame(columns=colunas)
+
+    resultado = pd.DataFrame(linhas)
+    resultado["janela_segundos"] = (resultado["ultimo_evento"] - resultado["primeiro_evento"]).dt.total_seconds()
+    divisor = resultado["janela_segundos"].replace(0, np.nan)
+    resultado["eventos_por_segundo"] = round(resultado["total_eventos"] / divisor, 3)
+    resultado["dt_processamento"] = datetime.utcnow().isoformat()
+
+    logger.info(f"[Gold] monitoramento_streaming: {len(resultado)} tópico(s), {resultado['total_eventos'].sum():,} eventos totais")
+    return resultado[colunas]
+
+
 # ─── Orquestrador principal ───────────────────────────────────────────────────
 
 @timer
@@ -224,6 +273,17 @@ def executar_agregacao_gold(anos: list = None) -> dict:
     except Exception as e:
         logger.error(f"[Gold] Erro ao construir 'evolucao_temporal': {e}")
         resultados["evolucao_temporal"] = {"status": "erro", "erro": str(e)}
+
+    try:
+        df_monitoramento = construir_monitoramento_streaming()
+        if not df_monitoramento.empty:
+            _salvar_gold(df_monitoramento, "monitoramento_streaming", ["topico"])
+            resultados["monitoramento_streaming"] = {"status": "sucesso", "registros": len(df_monitoramento)}
+        else:
+            resultados["monitoramento_streaming"] = {"status": "pulado", "motivo": "streaming nunca rodou"}
+    except Exception as e:
+        logger.error(f"[Gold] Erro ao construir 'monitoramento_streaming': {e}")
+        resultados["monitoramento_streaming"] = {"status": "erro", "erro": str(e)}
 
     logger.info("AGREGAÇÃO GOLD CONCLUÍDA")
     resumo_execucao(resultados)

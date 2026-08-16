@@ -132,6 +132,17 @@ REGRAS_SILVER = {
             "sigla_uf": ("diretorio_uf", "sigla_uf"),
         },
     },
+    # Linhagem de streaming (opcional — só existe se pipeline/streaming/ já rodou)
+    "indicador_streaming": {
+        "chaves_primarias": ["id_municipio", "ano", "timestamp"],
+        "obrigatorias": ["id_municipio", "sigla_uf", "ano", "indicador_alfabetizacao"],
+        "max_pct_nulos": 0.0,
+    },
+    "meta_streaming": {
+        "chaves_primarias": ["sigla_uf", "ano", "timestamp"],
+        "obrigatorias": ["sigla_uf", "ano", "meta_percentual"],
+        "max_pct_nulos": 0.0,
+    },
 }
 
 REGRAS_GOLD = {
@@ -148,6 +159,11 @@ REGRAS_GOLD = {
     "evolucao_temporal": {
         "chaves_primarias": ["nivel", "referencia", "ano"],
         "obrigatorias": ["nivel", "referencia", "ano", "indicador"],
+        "max_pct_nulos": 0.0,
+    },
+    "monitoramento_streaming": {
+        "chaves_primarias": ["topico"],
+        "obrigatorias": ["topico", "total_eventos", "cobertura_distinta"],
         "max_pct_nulos": 0.0,
     },
 }

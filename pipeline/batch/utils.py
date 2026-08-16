@@ -114,16 +114,25 @@ def log_qualidade(df: pd.DataFrame, nome_tabela: str) -> dict:
     return metricas
 
 
+_ROTULOS_STATUS = {
+    "sucesso": "OK  ",
+    "erro": "ERRO",
+    "ausente_na_bronze": "-   ",
+    "pulado": "-   ",
+}
+
+
 def resumo_execucao(resultados: dict) -> None:
     """Imprime resumo tabular da execução da pipeline."""
     logger = get_logger(__name__)
     sucesso = [k for k, v in resultados.items() if v.get("status") == "sucesso"]
     erro = [k for k, v in resultados.items() if v.get("status") == "erro"]
+    outros = [k for k, v in resultados.items() if v.get("status") not in ("sucesso", "erro")]
 
     logger.info("─" * 60)
     for tabela, info in resultados.items():
-        status_str = "OK  " if info.get("status") == "sucesso" else "ERRO"
+        status_str = _ROTULOS_STATUS.get(info.get("status"), "ERRO")
         registros = f"{info.get('registros', '-'):>10,}" if isinstance(info.get("registros"), int) else f"{'':>10}"
         logger.info(f"  [{status_str}] {tabela:<35} {registros} registros")
     logger.info("─" * 60)
-    logger.info(f"  Total: {len(sucesso)} sucesso | {len(erro)} erro")
+    logger.info(f"  Total: {len(sucesso)} sucesso | {len(erro)} erro | {len(outros)} pulado/ausente")

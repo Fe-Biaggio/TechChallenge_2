@@ -10,13 +10,16 @@ flowchart TD
         PROD["producer.py"] --> CONS["consumer.py"]
     end
     subgraph BronzeL["Bronze"]
-        BZ[("8 tabelas Parquet")]
+        BZ[("8 tabelas batch")]
+        BZS[("2 tabelas streaming")]
     end
     subgraph SilverL["Silver"]
-        SV["02_processamento_silver.py"] --> SVT[("tabelas limpas + integrado")]
+        SV["02_processamento_silver.py"] --> SVT[("tabelas batch + integrado")]
+        SV --> SVS[("indicador/meta streaming - linhagem separada")]
     end
     subgraph GoldL["Gold"]
         GD["03_agregacao_gold.py"] --> GDT[("3 datasets analiticos")]
+        GD --> GDS[("monitoramento_streaming")]
     end
     subgraph Consumo["Consumo"]
         DASH["Dashboards"]
@@ -26,9 +29,11 @@ flowchart TD
     BQ --> ING
     RAW --> ING
     ING --> BZ
-    CONS --> BZ
+    CONS --> BZS
     BZ --> SV
+    BZS --> SV
     SVT --> GD
+    SVS --> GD
     GDT --> DASH
     GDT --> STAT
     GDT --> ML
