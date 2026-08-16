@@ -29,26 +29,26 @@ Diagramas completos (arquitetura + fluxo de dados/joins) em
 nativamente no GitHub.
 
 ```
-Fontes (BigQuery ou data/raw/*.csv)
-      │
-      ▼                                  Streaming (simulado)
-┌─────────────┐     Batch      ┌──────────────┐   producer.py → consumer.py
-│ Base dos    │ ─────────────► │    BRONZE    │        │
-│ Dados       │                │ 8 tabelas,   │◄───────┘
-│ (INEP)      │                │ raw, part.   │
-│             │                │ por ano      │
+Fontes (BigQuery ou data/raw/*.csv)          Streaming (simulado)
+      │                                    producer.py → consumer.py
+      ▼ Batch                                       │
+┌─────────────┐                ┌──────────────┐     │
+│ Base dos    │ ─────────────► │    BRONZE    │◄────┘
+│ Dados       │                │ 8 tabelas    │  streaming_indicadores/
+│ (INEP)      │                │ batch + 2    │  streaming_metas
+│             │                │ streaming    │
 └─────────────┘                └──────┬───────┘
                                        │  limpeza, decodificação de "rede",
                                        │  melt de metas, integração
                                        ▼
                                 ┌──────────────┐
-                                │    SILVER    │  10 tabelas tratadas
-                                └──────┬───────┘
+                                │    SILVER    │  12 tabelas — 10 batch tratadas
+                                └──────┬───────┘  + 2 streaming (linhagem própria)
                                        │  agregação analítica
                                        ▼
                                 ┌──────────────┐
-                                │     GOLD     │  3 datasets analíticos
-                                └──────┬───────┘
+                                │     GOLD     │  4 datasets — 3 analíticos
+                                └──────┬───────┘  + 1 monitoramento de streaming
                                        │
                            ┌───────────┼───────────┐
                            ▼           ▼            ▼
@@ -58,17 +58,27 @@ Fontes (BigQuery ou data/raw/*.csv)
 Qualidade de dados (`quality/validacao_dados.py`) valida as três camadas de
 forma transversal — ver seção "Metodologia" abaixo.
 
+**Batch vs. Streaming é o *modo de ingestão* (como o dado chega), não uma
+divisão entre camadas** — os dois alimentam a Bronze, e Silver/Gold operam
+sobre o que está lá independente da origem. O streaming simulado gera eventos
+sintéticos (não o resultado oficial do INEP) para demonstrar o padrão de
+ingestão incremental; por isso sua linhagem (`indicador_streaming`,
+`meta_streaming` na Silver) fica separada da análise real, e alimenta só o
+dataset de **monitoramento** na Gold, não `alfabetizacao_integrado`.
+
 ### Bronze Layer — Dados Brutos
 
 - Ingestão sem transformação: `SELECT *` (BigQuery) ou leitura direta do CSV (fallback)
 - Histórico completo preservado, um diretório por tabela
 - Formato: Parquet particionado por `ano` (tabelas de referência sem partição)
-- 8 tabelas: `indicador_municipio`, `indicador_uf`, `meta_brasil`, `meta_uf`,
+- 8 tabelas batch: `indicador_municipio`, `indicador_uf`, `meta_brasil`, `meta_uf`,
   `meta_municipio`, `alunos` (~3,87M registros), `diretorio_municipio`, `diretorio_uf`
+- 2 tabelas streaming (append-only, uma vez que `pipeline/streaming/04_simulacao_streaming.py`
+  roda): `streaming_indicadores`, `streaming_metas`
 
 ### Silver Layer — Dados Tratados
 
-Transformações aplicadas:
+Transformações aplicadas às tabelas batch:
 - Limpeza, tipagem e padronização de nomes de colunas
 - Decodificação de `rede` (código numérico → rótulo, ver `REDE_MAP` em `config.py`)
 - "Despivotagem" das tabelas de meta (`meta_alfabetizacao_2024..2030`, formato
@@ -81,16 +91,23 @@ Transformações aplicadas:
   só existe a partir da vintage 2024; `proficiencia` nula para aluno ausente)
   não são imputados — imputar mediana nesses casos distorceria a distribuição real
 
+As tabelas de streaming (`indicador_streaming`, `meta_streaming`) recebem
+limpeza/tipagem equivalente, mas ficam fora da integração — ver nota acima.
+
 ### Gold Layer — Camada Analítica
 
-3 datasets prontos para consumo:
+3 datasets analíticos (dado real) + 1 de monitoramento (dado de streaming):
 - `indicador_alfabetizacao_municipio` — indicador por município/ano, gap vs.
   meta municipal, gap vs. indicador nacional, faixa de risco
 - `comparacao_metas_resultados` — metas vs. resultados por UF/ano (rede
   Pública), com % de municípios da UF que atingiram sua meta municipal
 - `evolucao_temporal` — série histórica do indicador (Brasil + UF), com
   variação ano a ano
-- Preparado para dashboards, análises estatísticas e treinamento de modelos de ML
+- `monitoramento_streaming` — volume, cobertura territorial e janela temporal
+  dos eventos de streaming processados (observabilidade da ingestão, não
+  análise educacional)
+- Os 3 primeiros ficam prontos para dashboards, análises estatísticas e
+  treinamento de modelos de ML
 
 ---
 
@@ -171,12 +188,16 @@ Processamento sob demanda das 8 tabelas fonte, com fallback automático:
 
 ### 2. Ingestão Streaming ([`pipeline/streaming/`](pipeline/streaming/))
 Simulação de eventos em tempo quase real (fila em memória por padrão, ou Kafka
-real se configurado):
+real se configurado), que alimenta a Bronze e segue até Silver/Gold como
+linhagem própria (ver nota em "Arquitetura da Solução"):
 - Atualização de indicadores municipais
 - Atualização/revisão de metas
+- Consumer processa em micro-lotes e persiste em Parquet append-only —
+  cada execução acrescenta eventos, não substitui os anteriores
 
 ### 3. Qualidade de Dados ([`quality/validacao_dados.py`](quality/validacao_dados.py))
-Valida as 3 camadas (Bronze, Silver, Gold) — 21 tabelas, 0 alertas na última
+Valida as 3 camadas (Bronze, Silver, Gold) — 21 tabelas batch sempre, +3 de
+streaming se `04_simulacao_streaming.py` já rodou, 0 alertas na última
 execução contra os dados reais:
 - Completude (limiar de nulos por coluna, calibrado por tabela — nulos
   estruturais como `proporcao_aluno_nivel_*` pré-2024 não geram alerta)
@@ -298,17 +319,31 @@ python pipeline/batch/02_processamento_silver.py
 python pipeline/batch/03_agregacao_gold.py
 ```
 
-### 3. Executar a Simulação de Streaming
+### 3. Executar a Simulação de Streaming (opcional)
 
 ```bash
-python pipeline/streaming/04_simulacao_streaming.py
+python pipeline/streaming/04_simulacao_streaming.py 30    # roda por 30s
 ```
+
+Cada execução **acrescenta** eventos (não substitui) — é um log append-only.
+Rode Silver e Gold de novo depois para que `indicador_streaming`,
+`meta_streaming` e `monitoramento_streaming` reflitam os novos eventos:
+
+```bash
+python pipeline/batch/02_processamento_silver.py
+python pipeline/batch/03_agregacao_gold.py
+```
+
+Sem esse passo, a pipeline roda normalmente — essas 3 tabelas simplesmente
+não existem, e tudo o resto (a análise real) fica intacto.
 
 ### 4. Validação de Qualidade
 
 ```bash
 python quality/validacao_dados.py
 ```
+
+Valida 21 tabelas batch sempre, +3 de streaming se o passo 3 já rodou.
 
 ### 5. Explorar via Notebooks (ordem recomendada)
 
@@ -324,14 +359,23 @@ jupyter lab
 
 ## Monitoramento da Pipeline
 
-Mecanismos de observabilidade implementados (`pipeline/batch/utils.py`):
-- Logs estruturados por etapa, com timestamp e nível (Bronze / Silver / Gold)
-- Resumo de execução por tabela (sucesso/erro/registros) ao final de cada camada
+Mecanismos de observabilidade implementados:
+- Logs estruturados por etapa, com timestamp e nível (Bronze / Silver / Gold),
+  `pipeline/batch/utils.py`
+- Resumo de execução por tabela (sucesso/erro/pulado/registros) ao final de
+  cada camada — distingue erro real de tabela opcional ausente
 - Métricas de qualidade por tabela a cada ingestão/transformação (nulos,
   duplicatas, registros) via `log_qualidade()`
 - Tempo de execução por função (decorator `@timer`) — visível nos logs
+- **Volume e latência da ingestão de streaming** — `monitoramento_streaming`
+  na Gold: total de eventos, cobertura territorial distinta, janela temporal
+  (primeiro/último evento) e eventos/segundo por tópico, derivados do que foi
+  de fato persistido (não é só um log efêmero)
 
 **Não implementado nesta entrega** (item opcional do desafio): alertas
-externos (e-mail/Slack/PagerDuty) e um dashboard de observabilidade dedicado
-— os logs estruturados já dão a rastreabilidade necessária para o volume
-atual, mas não substituem alertas ativos em um cenário de produção real.
+externos (e-mail/Slack/PagerDuty), um dashboard de observabilidade dedicado,
+e contagem persistida de eventos inválidos — o consumer de streaming descarta
+eventos inválidos sem gravá-los (só aparece no log da execução ao vivo, ver
+`pipeline/streaming/consumer.py`). Os logs estruturados e o monitoramento
+persistido já dão rastreabilidade para o volume atual, mas não substituem
+alertas ativos em um cenário de produção real.

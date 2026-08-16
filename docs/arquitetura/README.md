@@ -22,17 +22,20 @@ flowchart TD
     end
 
     subgraph BronzeL["Bronze — dados brutos"]
-        BZ[("8 tabelas Parquet\nparticionadas por ano")]
+        BZ[("8 tabelas batch\nparticionadas por ano")]
+        BZS[("2 tabelas streaming\nappend-only")]
     end
 
     subgraph SilverL["Silver — limpeza e integração"]
         SV["02_processamento_silver.py"]
-        SVT[("indicador_*, meta_*,\ndiretorio_*, alunos,\nalfabetizacao_integrado")]
+        SVT[("10 tabelas batch tratadas +\nalfabetizacao_integrado")]
+        SVS[("indicador_streaming\nmeta_streaming\n(linhagem separada)")]
     end
 
     subgraph GoldL["Gold — camada analítica"]
         GD["03_agregacao_gold.py"]
         GDT[("indicador_alfabetizacao_municipio\ncomparacao_metas_resultados\nevolucao_temporal")]
+        GDS[("monitoramento_streaming")]
     end
 
     subgraph Qualidade["Qualidade (transversal)"]
@@ -48,9 +51,11 @@ flowchart TD
     BQ -->|"SELECT * (sem transformação)"| ING
     RAW -->|"fallback se BigQuery indisponível"| ING
     ING --> BZ
-    PROD --> CONS --> BZ
+    PROD --> CONS --> BZS
     BZ --> SV --> SVT
+    BZS --> SV --> SVS
     SVT --> GD --> GDT
+    SVS --> GD --> GDS
     GDT --> DASH & STAT & ML
 
     QA -.valida.-> BZ
@@ -64,6 +69,13 @@ ambiente de desenvolvimento. `01_ingestao_bronze.py` tenta o BigQuery primeiro
 (produção) e cai automaticamente para os CSVs de `data/raw/` (o mesmo dado,
 exportado manualmente uma vez) sem exigir intervenção manual — o restante da
 pipeline (Silver, Gold, qualidade) roda idêntico em ambos os caminhos.
+
+**Por que o streaming vira uma linhagem separada, não se junta ao batch:** os
+eventos de streaming são sintéticos (gerados por `producer.py` para demonstrar
+o padrão de ingestão incremental), não o resultado oficial do INEP. Misturá-los
+em `alfabetizacao_integrado` contaminaria a análise real com números fabricados
+— por isso seguem até a Gold só como `monitoramento_streaming` (volume,
+cobertura, latência), nunca como dado analítico.
 
 ## 2. Fluxo de dados — de que tabela vem cada join da Gold
 
