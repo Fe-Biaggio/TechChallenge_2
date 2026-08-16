@@ -1,7 +1,7 @@
 """
 Validação de Qualidade de Dados
 
-Executa verificações de qualidade nas camadas Bronze e Silver:
+Executa verificações de qualidade nas camadas Bronze, Silver e Gold:
   - Completude (valores ausentes)
   - Unicidade (duplicatas)
   - Integridade referencial (chaves órfãs)
@@ -9,9 +9,10 @@ Executa verificações de qualidade nas camadas Bronze e Silver:
   - Volumetria (variações inesperadas no número de registros)
 
 Uso:
-    python quality/validacao_dados.py              # valida Bronze e Silver
+    python quality/validacao_dados.py              # valida Bronze, Silver e Gold
     python quality/validacao_dados.py --camada bronze
     python quality/validacao_dados.py --camada silver
+    python quality/validacao_dados.py --camada gold
 """
 import sys
 from datetime import datetime
@@ -23,7 +24,7 @@ import pyarrow.parquet as pq
 # Garante que o root do projeto está no path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from pipeline.batch.config import BRONZE_DIR, SILVER_DIR
+from pipeline.batch.config import BRONZE_DIR, SILVER_DIR, GOLD_DIR
 from pipeline.batch.utils import get_logger
 
 logger = get_logger(__name__)
@@ -33,50 +34,121 @@ logger = get_logger(__name__)
 
 REGRAS_BRONZE = {
     "indicador_municipio": {
-        "chaves_primarias": ["ano", "id_municipio"],
-        "obrigatorias": ["ano", "id_municipio", "sigla_uf"],
-        "max_pct_nulos": 5.0,
+        "chaves_primarias": ["ano", "id_municipio", "serie", "rede"],
+        "obrigatorias": ["ano", "id_municipio", "rede", "taxa_alfabetizacao"],
+        # proporcao_aluno_nivel_* só existem a partir da vintage 2024 — eleva o limite
+        "max_pct_nulos": 40.0,
     },
     "indicador_uf": {
-        "chaves_primarias": ["ano", "sigla_uf"],
-        "obrigatorias": ["ano", "sigla_uf"],
-        "max_pct_nulos": 2.0,
+        "chaves_primarias": ["ano", "sigla_uf", "serie", "rede"],
+        "obrigatorias": ["ano", "sigla_uf", "rede", "taxa_alfabetizacao"],
+        "max_pct_nulos": 40.0,
     },
-    "indicador_brasil": {
-        "chaves_primarias": ["ano"],
-        "obrigatorias": ["ano"],
-        "max_pct_nulos": 0.0,
+    "meta_brasil": {
+        "chaves_primarias": ["ano", "rede"],
+        "obrigatorias": ["ano", "rede"],
+        "max_pct_nulos": 5.0,
     },
-    "municipios": {
+    "meta_uf": {
+        "chaves_primarias": ["ano", "sigla_uf", "rede"],
+        "obrigatorias": ["ano", "sigla_uf", "rede"],
+        "max_pct_nulos": 15.0,
+    },
+    "meta_municipio": {
+        "chaves_primarias": ["ano", "id_municipio", "rede"],
+        "obrigatorias": ["ano", "id_municipio", "rede"],
+        "max_pct_nulos": 5.0,
+    },
+    "alunos": {
+        "chaves_primarias": ["ano", "id_municipio", "id_escola", "id_aluno"],
+        "obrigatorias": ["ano", "id_municipio", "id_aluno", "alfabetizado"],
+        "max_pct_nulos": 10.0,
+    },
+    "diretorio_municipio": {
         "chaves_primarias": ["id_municipio"],
-        "obrigatorias": ["id_municipio", "sigla_uf"],
-        "max_pct_nulos": 1.0,
+        "obrigatorias": ["id_municipio", "nome", "sigla_uf"],
+        # colunas de região metropolitana/comarca são esparsas por natureza
+        "max_pct_nulos": 15.0,
     },
-    "ufs": {
-        "chaves_primarias": ["sigla_uf"],
-        "obrigatorias": ["sigla_uf"],
+    "diretorio_uf": {
+        "chaves_primarias": ["sigla"],
+        "obrigatorias": ["sigla", "nome", "regiao"],
         "max_pct_nulos": 0.0,
     },
 }
 
 REGRAS_SILVER = {
     "indicador_municipio": {
-        "chaves_primarias": ["ano", "id_municipio"],
-        "obrigatorias": ["ano", "id_municipio", "sigla_uf"],
-        "max_pct_nulos": 2.0,
+        "chaves_primarias": ["ano", "id_municipio", "serie", "rede"],
+        "obrigatorias": ["ano", "id_municipio", "rede_label", "taxa_alfabetizacao"],
+        "max_pct_nulos": 40.0,
     },
     "indicador_uf": {
-        "chaves_primarias": ["ano", "sigla_uf"],
-        "obrigatorias": ["ano", "sigla_uf"],
-        "max_pct_nulos": 1.0,
+        "chaves_primarias": ["ano", "sigla_uf", "serie", "rede"],
+        "obrigatorias": ["ano", "sigla_uf", "rede_label", "taxa_alfabetizacao"],
+        "max_pct_nulos": 40.0,
+    },
+    "indicador_brasil": {
+        "chaves_primarias": ["ano"],
+        "obrigatorias": ["ano", "taxa_alfabetizacao"],
+        "max_pct_nulos": 0.0,
+    },
+    "meta_brasil": {
+        "chaves_primarias": ["ano_meta"],
+        "obrigatorias": ["ano_meta", "valor_meta"],
+        "max_pct_nulos": 0.0,
+    },
+    "meta_uf": {
+        "chaves_primarias": ["sigla_uf", "ano_meta"],
+        "obrigatorias": ["sigla_uf", "ano_meta", "valor_meta"],
+        "max_pct_nulos": 0.0,
+    },
+    "meta_municipio": {
+        "chaves_primarias": ["id_municipio", "ano_meta"],
+        "obrigatorias": ["id_municipio", "ano_meta", "valor_meta"],
+        "max_pct_nulos": 0.0,
+    },
+    "diretorio_municipio": {
+        "chaves_primarias": ["id_municipio"],
+        "obrigatorias": ["id_municipio", "nome_municipio", "sigla_uf"],
+        "max_pct_nulos": 5.0,
+    },
+    "diretorio_uf": {
+        "chaves_primarias": ["sigla_uf"],
+        "obrigatorias": ["sigla_uf", "nome_uf", "regiao"],
+        "max_pct_nulos": 0.0,
+    },
+    "alunos": {
+        "chaves_primarias": ["ano", "id_municipio", "id_escola", "id_aluno"],
+        "obrigatorias": ["ano", "id_municipio", "id_aluno"],
+        "max_pct_nulos": 10.0,
     },
     "alfabetizacao_integrado": {
         "chaves_primarias": ["ano", "id_municipio"],
-        "obrigatorias": ["ano", "id_municipio", "sigla_uf"],
-        "max_pct_nulos": 5.0,
+        "obrigatorias": ["ano", "id_municipio", "sigla_uf", "taxa_alfabetizacao"],
+        # gap/meta ficam nulos para municípios sem rede Municipal avaliada naquele ano — esperado
+        "max_pct_nulos": 40.0,
         "integridade_referencial": {
-            "sigla_uf": ("ufs", "sigla_uf"),
+            "sigla_uf": ("diretorio_uf", "sigla_uf"),
         },
+    },
+}
+
+REGRAS_GOLD = {
+    "indicador_alfabetizacao_municipio": {
+        "chaves_primarias": ["ano", "id_municipio"],
+        "obrigatorias": ["ano", "id_municipio", "sigla_uf", "taxa_alfabetizacao"],
+        "max_pct_nulos": 40.0,
+    },
+    "comparacao_metas_resultados": {
+        "chaves_primarias": ["ano", "sigla_uf"],
+        "obrigatorias": ["ano", "sigla_uf", "taxa_alfabetizacao", "meta_alfabetizacao"],
+        "max_pct_nulos": 0.0,
+    },
+    "evolucao_temporal": {
+        "chaves_primarias": ["nivel", "referencia", "ano"],
+        "obrigatorias": ["nivel", "referencia", "ano", "indicador"],
+        "max_pct_nulos": 0.0,
     },
 }
 
@@ -221,8 +293,11 @@ def validar_camada(camada: str) -> dict:
     elif camada == "silver":
         camada_dir = SILVER_DIR
         regras_mapa = REGRAS_SILVER
+    elif camada == "gold":
+        camada_dir = GOLD_DIR
+        regras_mapa = REGRAS_GOLD
     else:
-        raise ValueError(f"Camada inválida: '{camada}'. Use 'bronze' ou 'silver'.")
+        raise ValueError(f"Camada inválida: '{camada}'. Use 'bronze', 'silver' ou 'gold'.")
 
     logger.info(f"{'='*60}")
     logger.info(f"VALIDAÇÃO — CAMADA {camada.upper()} — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -264,10 +339,11 @@ def validar_camada(camada: str) -> dict:
 
 
 def executar_validacao_completa() -> dict:
-    """Valida Bronze e Silver e retorna relatório consolidado."""
+    """Valida Bronze, Silver e Gold e retorna relatório consolidado."""
     return {
         "bronze": validar_camada("bronze"),
         "silver": validar_camada("silver"),
+        "gold": validar_camada("gold"),
         "timestamp": datetime.utcnow().isoformat(),
     }
 
