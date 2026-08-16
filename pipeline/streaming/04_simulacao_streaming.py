@@ -15,7 +15,11 @@ Uso:
 import signal
 import sys
 import time
+from pathlib import Path
 from queue import Queue
+
+# Garante que o root do projeto está no path ao rodar como script direto
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from pipeline.batch.config import (
     KAFKA_TOPIC_INDICADORES,

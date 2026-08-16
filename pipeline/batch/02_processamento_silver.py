@@ -28,6 +28,10 @@ Decisões de modelagem importantes (ver comentários no código):
   - Não existe tabela de resultado nacional no dataset de origem; a série
     Brasil é derivada da coluna taxa_alfabetizacao já presente em
     meta_brasil (resultado observado no ano de referência de cada vintage).
+  - indicador_streaming/meta_streaming (eventos de pipeline/streaming/) são
+    tratados como linhagem própria, limpos mas NÃO integrados em
+    alfabetizacao_integrado — são sintéticos, gerados para demonstrar o
+    padrão de ingestão incremental, não o resultado oficial do INEP.
 
 Uso:
     python pipeline/batch/02_processamento_silver.py
@@ -292,6 +296,50 @@ def transformar_diretorio_uf() -> pd.DataFrame:
 
 
 @timer
+def transformar_indicador_streaming() -> pd.DataFrame:
+    """
+    Limpa os eventos de streaming (simulados) de atualização de indicador.
+
+    Mantido como linhagem própria, separada de indicador_municipio: são
+    eventos sintéticos gerados por pipeline/streaming/producer.py para
+    demonstrar o padrão de ingestão incremental, não o resultado oficial do
+    INEP — não devem ser misturados em alfabetizacao_integrado nem na Gold
+    analítica, sob risco de contaminar a análise real com dado fabricado.
+    Só existe se pipeline/streaming/04_simulacao_streaming.py já rodou.
+    """
+    df = ler_bronze("streaming_indicadores", BRONZE_DIR)
+    df = _padronizar_colunas(df)
+
+    df = _garantir_tipos(df, {"ano": "int16", "id_municipio": "str"})
+    df["id_municipio"] = df["id_municipio"].str.strip()
+    df["sigla_uf"] = df["sigla_uf"].str.strip().str.upper()
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+
+    df = _remover_duplicatas(df, ["id_municipio", "ano", "timestamp"], "indicador_streaming")
+    df["dt_processamento"] = datetime.utcnow().isoformat()
+
+    log_qualidade(df, "indicador_streaming_silver")
+    return df
+
+
+@timer
+def transformar_meta_streaming() -> pd.DataFrame:
+    """Limpa os eventos de streaming (simulados) de atualização/revisão de meta."""
+    df = ler_bronze("streaming_metas", BRONZE_DIR)
+    df = _padronizar_colunas(df)
+
+    df = _garantir_tipos(df, {"ano": "int16"})
+    df["sigla_uf"] = df["sigla_uf"].str.strip().str.upper()
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+
+    df = _remover_duplicatas(df, ["sigla_uf", "ano", "timestamp"], "meta_streaming")
+    df["dt_processamento"] = datetime.utcnow().isoformat()
+
+    log_qualidade(df, "meta_streaming_silver")
+    return df
+
+
+@timer
 def transformar_alunos(anos: list = None) -> pd.DataFrame:
     """
     Limpa e padroniza os microdados de alunos. proficiencia/peso_aluno nulos
@@ -397,6 +445,10 @@ def executar_processamento_silver(anos: list = None) -> dict:
         "diretorio_municipio": (transformar_diretorio_municipio, []),
         "diretorio_uf": (transformar_diretorio_uf, []),
         "alunos": (lambda: transformar_alunos(anos), ["ano"]),
+        # Linhagem separada — só existe se 04_simulacao_streaming.py já rodou.
+        # Ver docstring de transformar_indicador_streaming: não entra na integração.
+        "indicador_streaming": (transformar_indicador_streaming, ["ano"]),
+        "meta_streaming": (transformar_meta_streaming, ["ano"]),
     }
 
     dfs = {}
