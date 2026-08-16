@@ -1,35 +1,48 @@
 """
 Ingestão Batch — Camada Bronze
 
-Consulta as tabelas do Indicador Criança Alfabetizada na plataforma
-Base dos Dados (via BigQuery) e persiste os dados brutos na Bronze
-em formato Parquet particionado por ano e UF.
+Ingestão híbrida: tenta consultar as tabelas do dataset "Avaliação da
+Alfabetização" (INEP) na plataforma Base dos Dados via BigQuery. Se o
+BigQuery não estiver configurado/acessível, cai automaticamente para os
+arquivos CSV brutos em data/raw/ (exportados manualmente do BigQuery).
+
+Em ambos os caminhos os dados são persistidos sem transformação na Bronze,
+em Parquet particionado por ano — a Bronze reflete a fonte tal como veio,
+sem joins, decodificação ou limpeza (isso acontece na Silver).
 
 Dataset de origem:
     basedosdados.org/dataset/073a39d4-89cf-4068-b1e8-34ed0d9c0b72
 
-Pré-requisitos:
+Pré-requisitos (caminho BigQuery, opcional):
     1. Projeto ativo no Google Cloud com BigQuery habilitado
-    2. GCP_PROJECT_ID configurado no .env
+    2. GCP_PROJECT_ID configurado no .env — é o Project ID do GCP, não o
+       Billing Account ID (formato "XXXX-XXXX-XXXX") da conta de faturamento
     3. Autenticação GCP:
        - Opção A: gcloud auth application-default login
        - Opção B: GOOGLE_APPLICATION_CREDENTIALS=/caminho/service_account.json no .env
 
+Caminho alternativo (fallback, usado quando o BigQuery não está disponível):
+    Coloque os CSVs exportados em data/raw/ com os nomes configurados em
+    pipeline.batch.config.TABELAS (raw_file).
+
 Uso:
-    python pipeline/batch/01_ingestao_bronze.py          # todos os anos
-    python pipeline/batch/01_ingestao_bronze.py 2023     # somente 2023
-    python pipeline/batch/01_ingestao_bronze.py 2022 2023  # range de anos
+    python pipeline/batch/01_ingestao_bronze.py            # todos os anos
+    python pipeline/batch/01_ingestao_bronze.py 2023       # somente 2023
+    python pipeline/batch/01_ingestao_bronze.py 2022 2023  # múltiplos anos
 """
 import sys
-from datetime import datetime
+from pathlib import Path
 
-import basedosdados as bd
 import pandas as pd
+
+# Garante que o root do projeto está no path ao rodar como script direto
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from pipeline.batch.config import (
     GCP_PROJECT_ID,
     BDD_PROJECT,
     BRONZE_DIR,
+    RAW_DIR,
     TABELAS,
 )
 from pipeline.batch.utils import (
@@ -42,51 +55,118 @@ from pipeline.batch.utils import (
 
 logger = get_logger(__name__)
 
+# Colunas lidas como texto — preserva formatação (zeros à esquerda, códigos)
+# e evita que o pandas infira tipos numéricos incompatíveis entre fontes.
+COLUNAS_TEXTO = [
+    "id_municipio", "sigla_uf", "sigla", "id_uf", "id_escola", "id_aluno",
+    "caderno", "serie", "id_municipio_6", "id_municipio_tse",
+    "id_municipio_rf", "id_municipio_bcb",
+]
+
+
+def _bigquery_disponivel() -> bool:
+    if not GCP_PROJECT_ID:
+        return False
+    try:
+        import basedosdados  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
 
 def validar_ambiente() -> bool:
-    """Verifica se as dependências mínimas estão configuradas."""
-    if not GCP_PROJECT_ID:
+    """Confirma que há pelo menos um caminho de ingestão viável: BigQuery ou raw."""
+    if _bigquery_disponivel():
+        logger.info(f"Projeto GCP: {GCP_PROJECT_ID} — ingestão via BigQuery")
+        return True
+
+    faltando = [
+        cfg["raw_file"] for cfg in TABELAS.values()
+        if not (RAW_DIR / cfg["raw_file"]).exists()
+    ]
+    if faltando:
         logger.error(
-            "GCP_PROJECT_ID não configurado.\n"
-            "  1. Copie .env.example para .env\n"
-            "  2. Preencha GCP_PROJECT_ID=seu-projeto-gcp\n"
-            "  Documentação: cloud.google.com/resource-manager/docs/creating-managing-projects"
+            "GCP_PROJECT_ID não configurado e faltam arquivos raw em "
+            f"{RAW_DIR}:\n  " + "\n  ".join(faltando) +
+            "\nColoque os CSVs no diretório acima ou configure GCP_PROJECT_ID "
+            "(Project ID, não Billing Account ID) no .env."
         )
         return False
-    logger.info(f"Projeto GCP: {GCP_PROJECT_ID}")
+
+    logger.info(f"GCP_PROJECT_ID não configurado — ingestão via arquivos raw em {RAW_DIR}")
     return True
 
 
-def _construir_query(dataset: str, table: str, anos: list = None) -> str:
-    """Monta a query BigQuery com filtro de anos opcional."""
-    tabela_bq = f"`{BDD_PROJECT}.{dataset}.{table}`"
+def _ingerir_bigquery(config: dict, anos: list = None) -> pd.DataFrame:
+    import basedosdados as bd
 
-    if anos:
+    tabela_bq = f"`{BDD_PROJECT}.{config['bq_table']}`"
+    filtro = ""
+    if anos and "ano" in config.get("particoes", []):
         anos_str = ", ".join(str(a) for a in anos)
         filtro = f"WHERE ano IN ({anos_str})"
-    else:
-        filtro = ""
 
-    return f"SELECT * FROM {tabela_bq} {filtro} ORDER BY 1"
+    query = f"SELECT * FROM {tabela_bq} {filtro}"
+    logger.info(f"[BigQuery] Consultando: {BDD_PROJECT}.{config['bq_table']}")
+    logger.debug(f"Query:\n{query}")
+    return bd.read_sql(query, billing_project_id=GCP_PROJECT_ID)
+
+
+def _ingerir_raw(config: dict, anos: list = None) -> pd.DataFrame:
+    caminho = RAW_DIR / config["raw_file"]
+    if not caminho.exists():
+        raise FileNotFoundError(
+            f"Arquivo raw não encontrado: {caminho}\n"
+            f"  Exporte a tabela '{config['bq_table']}' do Base dos Dados para este "
+            f"caminho, ou configure GCP_PROJECT_ID no .env para ingestão via BigQuery."
+        )
+
+    colunas = pd.read_csv(caminho, nrows=0).columns
+    dtype_hints = {c: "str" for c in colunas if c in COLUNAS_TEXTO}
+
+    # Os exports do Base dos Dados usados neste projeto vêm em Latin-1/cp1252,
+    # não UTF-8. O parser C do pandas substitui bytes inválidos por '�'
+    # silenciosamente mesmo com encoding_errors="strict" (não propaga o erro),
+    # então a detecção é feita lendo os bytes brutos e tentando decodificar
+    # como UTF-8 estrito fora do pandas.
+    with open(caminho, "rb") as f:
+        bruto = f.read()
+    try:
+        bruto.decode("utf-8")
+        encoding = "utf-8"
+    except UnicodeDecodeError:
+        encoding = "cp1252"
+    del bruto
+
+    logger.info(f"[Raw] Lendo: {caminho.name} (encoding={encoding})")
+    df = pd.read_csv(caminho, dtype=dtype_hints, encoding=encoding)
+
+    if anos and "ano" in df.columns:
+        df = df[df["ano"].isin(anos)]
+
+    return df
 
 
 @timer
-def ingerir_tabela(
-    nome_tabela: str,
-    config: dict,
-    anos: list = None,
-) -> pd.DataFrame:
-    """Executa a query no BigQuery e retorna o resultado como DataFrame."""
-    dataset = config["dataset"]
-    table = config["table"]
-    query = _construir_query(dataset, table, anos=anos)
+def ingerir_tabela(nome_tabela: str, config: dict, anos: list = None) -> tuple:
+    """
+    Ingere uma tabela tentando BigQuery primeiro; em caso de falha ou
+    indisponibilidade, cai para o arquivo raw local correspondente.
 
-    logger.info(f"Consultando: {BDD_PROJECT}.{dataset}.{table}")
-    logger.debug(f"Query:\n{query}")
+    Returns:
+        (DataFrame, fonte) — fonte é "bigquery" ou "raw"
+    """
+    if _bigquery_disponivel():
+        try:
+            df = _ingerir_bigquery(config, anos=anos)
+            log_qualidade(df, nome_tabela)
+            return df, "bigquery"
+        except Exception as e:
+            logger.warning(f"[BigQuery] Falhou para '{nome_tabela}' ({e}) — usando fallback raw")
 
-    df = bd.read_sql(query, billing_project_id=GCP_PROJECT_ID)
+    df = _ingerir_raw(config, anos=anos)
     log_qualidade(df, nome_tabela)
-    return df
+    return df, "raw"
 
 
 @timer
@@ -102,21 +182,20 @@ def executar_ingestao_bronze(anos: list = None) -> dict:
         Dicionário com status de cada tabela ingerida.
     """
     resultados = {}
-    inicio = datetime.now()
 
     logger.info("=" * 60)
-    logger.info(f"INGESTÃO BRONZE — {inicio.strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info("INGESTÃO BRONZE")
     logger.info(f"Anos: {anos if anos else 'todos'}")
     logger.info(f"Tabelas: {list(TABELAS.keys())}")
     logger.info("=" * 60)
 
     for nome_tabela, config in TABELAS.items():
-        anos_filtro = anos if "ano" in config.get("particoes", []) else None
         try:
-            df = ingerir_tabela(nome_tabela, config, anos=anos_filtro)
+            df, fonte = ingerir_tabela(nome_tabela, config, anos=anos)
             caminho = salvar_bronze(df, nome_tabela, BRONZE_DIR, config["particoes"])
             resultados[nome_tabela] = {
                 "status": "sucesso",
+                "fonte": fonte,
                 "registros": len(df),
                 "caminho": str(caminho),
             }
@@ -125,8 +204,7 @@ def executar_ingestao_bronze(anos: list = None) -> dict:
             nivel(f"Erro ao ingerir '{nome_tabela}': {e}")
             resultados[nome_tabela] = {"status": "erro", "erro": str(e)}
 
-    fim = datetime.now()
-    logger.info(f"INGESTÃO BRONZE CONCLUÍDA em {(fim - inicio).seconds}s")
+    logger.info("INGESTÃO BRONZE CONCLUÍDA")
     resumo_execucao(resultados)
     return resultados
 

@@ -11,10 +11,13 @@ venv/
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
-# Data — arquivos brutos grandes não versionados
-data/bronze/*.parquet
-data/silver/*.parquet
-data/gold/*.parquet
+# Data — camadas geradas pela pipeline, não versionadas (inclusive partições aninhadas)
+data/bronze/**/*.parquet
+data/silver/**/*.parquet
+data/gold/**/*.parquet
+
+# Data — fonte raw grande demais para o GitHub (limite de 100MB/arquivo)
+data/raw/br_inep_avaliacao_alfabetizacao_alunos.csv
 
 # Spark
 spark-warehouse/

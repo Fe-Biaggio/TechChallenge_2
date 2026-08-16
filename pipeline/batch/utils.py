@@ -53,7 +53,7 @@ def salvar_bronze(
             table,
             root_path=str(destino),
             partition_cols=particoes,
-            existing_data_behavior="overwrite_or_ignore",
+            existing_data_behavior="delete_matching",
             compression=COMPRESSAO_PARQUET,
         )
     else:
