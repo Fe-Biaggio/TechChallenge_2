@@ -283,7 +283,10 @@ TechChallenge_2/
 │   ├── dashboard.html                     # Painel analítico — HTML autocontido, gerado
 │   ├── dashboard_template.html            # Template do painel (estrutura/estilo/JS)
 │   ├── dashboard_data.json                # Agregados Gold consumidos pelo painel (gerado)
-│   └── gerar_dashboard_dados.py           # Gold (+ Silver/alunos) → dashboard.html
+│   ├── gerar_dashboard_dados.py           # Gold (+ Silver/alunos) → dashboard.html
+│   └── presentation/
+│       ├── Alfabetizacao_Apresentacao.pptx  # Apoio para o vídeo executivo (gerado)
+│       └── gerar_apresentacao.py            # dashboard_data.json → .pptx
 ├── requirements.txt                       # Dependências Python
 ├── pytest.ini                             # Configuração dos testes
 └── README.md
@@ -549,6 +552,25 @@ Lê Gold (+ `alunos` da Silver, só para agregados — nenhum microdado individu
 é exposto no HTML) e roda a validação de qualidade de dados, escrevendo
 `reports/dashboard_data.json` + `reports/dashboard.html` (o JSON é injetado em
 `reports/dashboard_template.html`, que contém a estrutura/estilo/JS do painel).
+
+## Apresentação Executiva
+
+[`reports/presentation/Alfabetizacao_Apresentacao.pptx`](reports/presentation/Alfabetizacao_Apresentacao.pptx) —
+apoio para o vídeo executivo pedido no desafio (problema de negócio,
+arquitetura da solução, valor para análises educacionais, potencial de IA),
+mais uma seção de qualidade/limitações dos dados. 9 slides, paleta e layout
+seguem o modelo usado na apresentação do Tech Challenge Fase 1, com os
+números vindos de `reports/dashboard_data.json` (não fabricados).
+
+Inclui a estimativa de custo simbólica de operação (BigQuery + Cloud Run +
+Storage) cruzando o volume real de dados (~219 MB) com a frequência de
+execução — a cadência recomendada (mensal) é a mesma discutida em "Frequência
+de atualização da fonte" acima.
+
+Para regenerar após atualizar o dashboard:
+```bash
+python reports/presentation/gerar_apresentacao.py
+```
 
 ## Monitoramento da Pipeline
 
