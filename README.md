@@ -504,14 +504,24 @@ e quem mais melhorou/piorou (delta):
   por rede de ensino, e ranking/delta por UF calculado direto dos microdados
   (complementar ao ranking oficial da aba UF, que usa o indicador agregado)
 
+O botão **"Qualidade dos Dados"** no canto superior direito abre uma página
+separada (com botão para voltar aos indicadores) com:
+- Resultado real da última validação (`quality/validacao_dados.py`), por
+  camada — tabelas verificadas, OK, com alerta
+- A limitação do dicionário oficial indisponível (ver seção "Limitação de
+  dados" acima) — quais colunas tiveram o significado inferido, e a evidência
+  usada para cada inferência
+- As demais limitações conhecidas (vintage do IDHM, streaming sintético,
+  alertas sem canal externo)
+
 Para regenerar após rodar a pipeline:
 ```bash
 python reports/gerar_dashboard_dados.py
 ```
 Lê Gold (+ `alunos` da Silver, só para agregados — nenhum microdado individual
-é exposto no HTML) e escreve `reports/dashboard_data.json` +
-`reports/dashboard.html` (o JSON é injetado em `reports/dashboard_template.html`,
-que contém a estrutura/estilo/JS do painel).
+é exposto no HTML) e roda a validação de qualidade de dados, escrevendo
+`reports/dashboard_data.json` + `reports/dashboard.html` (o JSON é injetado em
+`reports/dashboard_template.html`, que contém a estrutura/estilo/JS do painel).
 
 ## Monitoramento da Pipeline
 

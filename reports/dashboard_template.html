@@ -95,6 +95,32 @@
   }
   .subtitle { color: var(--ink-500); font-size: 13.5px; margin: 0 0 14px 0; }
 
+  .top-header-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .btn-outline, .btn-back {
+    appearance: none; cursor: pointer; font-family: var(--font-body);
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 7px;
+    border-radius: 100px; transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .btn-outline {
+    background: none; border: 1.5px solid var(--border); color: var(--ink-700);
+    padding: 8px 16px; margin-top: 2px;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
+  .btn-outline:focus-visible, .btn-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .dot-status {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--status-target);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-target) 20%, transparent);
+  }
+  .btn-back {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--ink-900);
+    padding: 9px 16px 9px 12px; margin-bottom: 18px;
+  }
+  .btn-back:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+
   nav.tabs { display: flex; gap: 4px; }
   nav.tabs button {
     appearance: none; border: none; background: none; cursor: pointer;
@@ -231,9 +257,16 @@
 <div class="app">
   <header class="top">
     <div class="top-inner">
-      <div class="eyebrow">Compromisso Nacional Criança Alfabetizada</div>
-      <h1 class="title">Painel de Acompanhamento — Indicador Criança Alfabetizada</h1>
-      <p class="subtitle">Camada Gold do pipeline · atualizado a cada execução de <code>03_agregacao_gold.py</code></p>
+      <div class="top-header-row">
+        <div>
+          <div class="eyebrow">Compromisso Nacional Criança Alfabetizada</div>
+          <h1 class="title">Painel de Acompanhamento — Indicador Criança Alfabetizada</h1>
+          <p class="subtitle">Camada Gold do pipeline · atualizado a cada execução de <code>03_agregacao_gold.py</code></p>
+        </div>
+        <button id="btn-qualidade" class="btn-outline" type="button">
+          <span class="dot-status"></span>Qualidade dos Dados
+        </button>
+      </div>
       <nav class="tabs" role="tablist">
         <button data-tab="brasil" class="active" role="tab" aria-selected="true">Brasil</button>
         <button data-tab="uf" role="tab" aria-selected="false">UF</button>
@@ -248,6 +281,7 @@
     <section id="panel-uf" class="panel"></section>
     <section id="panel-municipio" class="panel"></section>
     <section id="panel-aluno" class="panel"></section>
+    <section id="panel-qualidade" class="panel"></section>
   </main>
 
   <footer class="foot">
@@ -727,12 +761,138 @@ __DASHBOARD_DATA_JSON__
     panel.appendChild(deltaBlock);
   }
 
-  // ── Tabs ──
+  // ═══════════════════════════════ QUALIDADE DOS DADOS ══════════════════
+  const DICIONARIO_INDISPONIVEL = [
+    {
+      coluna: "rede", valores: "0, 1, 2, 3, 4, 5",
+      inferencia: "Total, Federal, Estadual, Municipal, Privada, Pública (ver REDE_MAP em config.py)",
+      evidencia: "Convenção padrão do INEP; ‘alunos’ só traz 2/3/4 (redes reais por aluno), enquanto os indicadores agregados também trazem 0/5 — consistente com 0/5 sendo agregados",
+    },
+    {
+      coluna: "serie", valores: "sempre 2",
+      inferencia: "2º ano do ensino fundamental",
+      evidencia: "Contexto do desafio (o Compromisso Nacional mede o 2º ano); não há outro valor na base para comparar",
+    },
+    {
+      coluna: "presenca", valores: "0 / 1",
+      inferencia: "Aluno ausente / presente na aplicação",
+      evidencia: "proficiencia é 100% nula quando presenca=0 e só 0,04% nula quando presenca=1",
+    },
+    {
+      coluna: "preenchimento_caderno", valores: "0 / 1",
+      inferencia: "Caderno de prova não preenchido / preenchido",
+      evidencia: "Mesmo padrão de presenca: proficiencia é 100% nula quando preenchimento_caderno=0",
+    },
+    {
+      coluna: "alfabetizado", valores: "0 / 1",
+      inferencia: "Não atingiu / atingiu o ponto de corte de 743 pontos",
+      evidencia: "Validado contra proficiencia: 0 de 3.354.661 registros com proficiência preenchida contradizem o corte de 743",
+    },
+  ];
+
+  function renderQualidade() {
+    const panel = document.getElementById("panel-qualidade");
+    const q = DATA.qualidade;
+
+    panel.appendChild(el("button", { id: "btn-voltar", class: "btn-back", type: "button" }, ["← Voltar para os indicadores"]));
+
+    panel.appendChild(el("div", { class: "eyebrow" }, ["Validação automatizada + limitações conhecidas"]));
+    panel.appendChild(el("h2", { class: "block-title", style: "font-size:22px; margin-bottom:4px" }, ["Qualidade dos Dados"]));
+    panel.appendChild(el("p", { class: "block-note", style: "margin-bottom:20px" }, [
+      `Última validação em ${new Date(q.timestamp).toLocaleString("pt-BR")} — quality/validacao_dados.py, executado ao gerar este painel.`,
+    ]));
+
+    panel.appendChild(el("div", { class: "stat-row" }, [
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Tabelas verificadas"]),
+        el("div", { class: "stat-value" }, [String(q.total.tabelas_verificadas)]),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Tabelas OK"]),
+        el("div", { class: "stat-value" }, [`${q.total.tabelas_ok} / ${q.total.tabelas_verificadas}`]),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Alertas de qualidade"]),
+        el("div", { class: "stat-value", style: q.total.total_alertas > 0 ? "color:var(--status-critical)" : "" }, [String(q.total.total_alertas)]),
+        el("div", { class: "stat-chip neutral" }, ["completude, unicidade, integridade referencial, domínio"]),
+      ]),
+    ]));
+
+    const camadaBlock = el("section", { class: "block" });
+    camadaBlock.appendChild(el("h2", { class: "block-title" }, ["Validação por camada"]));
+    const camadaCard = el("div", { class: "card" });
+    table(camadaCard, [
+      { nome: "Bronze", ...q.camadas.bronze },
+      { nome: "Silver", ...q.camadas.silver },
+      { nome: "Gold", ...q.camadas.gold },
+    ], [
+      { label: "Camada", render: (r) => r.nome },
+      { label: "Verificadas", num: true, render: (r) => String(r.tabelas_verificadas) },
+      { label: "OK", num: true, render: (r) => String(r.tabelas_ok) },
+      { label: "Com alerta", num: true, render: (r) => String(r.tabelas_com_alerta) },
+      { label: "Total de alertas", num: true, render: (r) => String(r.total_alertas) },
+    ]);
+    camadaBlock.appendChild(camadaCard);
+    panel.appendChild(camadaBlock);
+
+    const dicBlock = el("section", { class: "block" });
+    dicBlock.appendChild(el("h2", { class: "block-title" }, ["Dicionário oficial indisponível"]));
+    dicBlock.appendChild(el("p", { class: "block-note", style: "max-width:78ch" }, [
+      "O dataset br_inep_avaliacao_alfabetizacao disponibiliza uma tabela ‘dicionario’ que traduziria oficialmente os códigos usados nas demais tabelas — mas ela só é consultável via BigQuery, que exige projeto GCP com faturamento ativo (indisponível nesta entrega). Sem o dicionário oficial, o significado das colunas abaixo foi inferido — por convenção do INEP, pelo contexto do desafio e por validação empírica cruzada com outras colunas — e não confirmado pela fonte oficial:",
+    ]));
+    const dicCard = el("div", { class: "card" });
+    table(dicCard, DICIONARIO_INDISPONIVEL, [
+      { label: "Coluna", render: (r) => r.coluna },
+      { label: "Valores brutos", render: (r) => r.valores },
+      { label: "Inferência", render: (r) => r.inferencia },
+      { label: "Base da inferência", render: (r) => r.evidencia },
+    ]);
+    dicBlock.appendChild(dicCard);
+    dicBlock.appendChild(el("p", { class: "block-note", style: "max-width:78ch; margin-top:12px" }, [
+      "Atenção ao usar alfabetizado como feature: 513.338 alunos com alfabetizado=0 (~13% da base) não têm proficiencia registrada — ou seja, alfabetizado=0 mistura ‘avaliado e abaixo do corte’ com ‘não avaliado’. Filtrar por presenca=True antes de usar esse campo.",
+    ]));
+    panel.appendChild(dicBlock);
+
+    const limitBlock = el("section", { class: "block" });
+    limitBlock.appendChild(el("h2", { class: "block-title" }, ["Outras limitações conhecidas"]));
+    const limitCard = el("div", { class: "card" });
+    const ul = el("ul", { style: "margin:0; padding-left:20px; display:flex; flex-direction:column; gap:10px; font-size:13.5px; color:var(--ink-700)" }, [
+      el("li", {}, ["IDHM na vintage 2010 (último censo com apuração oficial) — não existe vintage 2020/2022 pública para esse índice."]),
+      el("li", {}, ["Os eventos de streaming são sintéticos (gerados para demonstrar o padrão de ingestão incremental) — não entram na análise real, só no monitoramento operacional."]),
+      el("li", {}, ["Alertas de erro ficam persistidos em arquivo (data/monitoramento/alertas.jsonl), mas sem canal externo ativo (e-mail/Slack/PagerDuty) nesta entrega."]),
+    ]);
+    limitCard.appendChild(ul);
+    limitBlock.appendChild(limitCard);
+    panel.appendChild(limitBlock);
+
+    panel.appendChild(el("button", { class: "btn-back", type: "button", id: "btn-voltar-2", style: "margin-top:4px" }, ["← Voltar para os indicadores"]));
+  }
+
+  // ── Navegação: tabs + página de Qualidade ──
+  let ultimaTabAtiva = "brasil";
+
+  function mostrarQualidade() {
+    document.querySelector("nav.tabs").style.display = "none";
+    document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+    document.getElementById("panel-qualidade").classList.add("active");
+  }
+  function mostrarIndicadores() {
+    document.getElementById("panel-qualidade").classList.remove("active");
+    document.querySelector("nav.tabs").style.display = "";
+    document.getElementById("panel-" + ultimaTabAtiva).classList.add("active");
+  }
+
+  document.getElementById("btn-qualidade").addEventListener("click", mostrarQualidade);
+  document.addEventListener("click", (ev) => {
+    if (ev.target.closest("#btn-voltar") || ev.target.closest("#btn-voltar-2")) mostrarIndicadores();
+  });
+
   document.querySelectorAll("nav.tabs button").forEach((btn) => {
     btn.addEventListener("click", () => {
       document.querySelectorAll("nav.tabs button").forEach((b) => { b.classList.remove("active"); b.setAttribute("aria-selected", "false"); });
       document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
       btn.classList.add("active"); btn.setAttribute("aria-selected", "true");
+      ultimaTabAtiva = btn.dataset.tab;
       document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
     });
   });
@@ -743,5 +903,6 @@ __DASHBOARD_DATA_JSON__
   renderUF();
   renderMunicipio();
   renderAluno();
+  renderQualidade();
 })();
 </script>

@@ -24,6 +24,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from pipeline.batch.config import GOLD_DIR, SILVER_DIR
+from quality.validacao_dados import executar_validacao_completa
 
 PONTO_CORTE_SAEB = 743
 MIN_ALUNOS_UF = 300  # limiar mínimo de alunos avaliados para entrar no ranking por UF (evita ruído de amostra pequena)
@@ -290,6 +291,40 @@ def montar_aluno(alunos: pd.DataFrame, diretorio_municipio: pd.DataFrame) -> dic
     }
 
 
+# ─── Qualidade de dados ────────────────────────────────────────────────────────
+
+def montar_qualidade() -> dict:
+    """Roda a validação real (quality/validacao_dados.py) e resume por camada."""
+    resultado = executar_validacao_completa()
+
+    resumo_camadas = {}
+    total = {"tabelas_verificadas": 0, "tabelas_ok": 0, "tabelas_com_alerta": 0, "total_alertas": 0}
+
+    for camada in ("bronze", "silver", "gold"):
+        tabelas = resultado[camada]
+        verificadas = {k: v for k, v in tabelas.items() if v["status"] != "nao_encontrada"}
+        ok = sum(1 for v in verificadas.values() if v["status"] == "OK")
+        com_alerta = sum(1 for v in verificadas.values() if v["status"] == "ALERTA")
+        n_alertas = sum(len(v.get("alertas", [])) for v in verificadas.values())
+
+        resumo_camadas[camada] = {
+            "tabelas_verificadas": len(verificadas),
+            "tabelas_ok": ok,
+            "tabelas_com_alerta": com_alerta,
+            "total_alertas": n_alertas,
+        }
+        total["tabelas_verificadas"] += len(verificadas)
+        total["tabelas_ok"] += ok
+        total["tabelas_com_alerta"] += com_alerta
+        total["total_alertas"] += n_alertas
+
+    return {
+        "timestamp": resultado["timestamp"],
+        "camadas": resumo_camadas,
+        "total": total,
+    }
+
+
 def main():
     evolucao = _ler(GOLD_DIR, "evolucao_temporal")
     comparacao = _ler(GOLD_DIR, "comparacao_metas_resultados")
@@ -310,6 +345,7 @@ def main():
         "uf": montar_uf(evolucao, comparacao),
         "municipio": montar_municipio(muni),
         "aluno": montar_aluno(alunos, diretorio_municipio),
+        "qualidade": montar_qualidade(),
     }
 
     dados_json = json.dumps(dados, ensure_ascii=False, indent=2)
