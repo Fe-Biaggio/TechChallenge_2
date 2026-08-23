@@ -181,6 +181,33 @@ Se o acesso ao BigQuery for configurado no futuro (`GCP_PROJECT_ID` no
 `.env`), a tabela `dicionario` deveria ser consultada para confirmar (ou
 corrigir) essas inferências antes de qualquer uso em produção.
 
+### Frequência de atualização da fonte
+
+Mesmo com a pipeline estruturada para ingestão híbrida (batch periódico +
+streaming simulado), a frequência real de atualização do indicador é limitada
+pela própria fonte, não pela arquitetura: a página do
+[dataset no Base dos Dados](https://basedosdados.org/dataset/073a39d4-89cf-4068-b1e8-34ed0d9c0b72)
+registra a última atualização em **23/09/2025**, mas até esta entrega os
+dados publicados ainda cobrem só **2023 e 2024** — nenhuma linha de 2025
+apareceu nas tabelas de resultado (`indicador_municipio`, `indicador_uf`) ou
+de alunos.
+
+Isso é esperado, não um defeito da pipeline: o Indicador Criança Alfabetizada
+vem da Avaliação de Alfabetização do Saeb, aplicada uma vez por ciclo letivo e
+consolidada/publicada pelo INEP com meses de defasagem — não é um dado
+transacional que muda dia a dia. A atualização de 23/09/2025 registrada na
+página do dataset provavelmente reflete manutenção de cadastro/metadados, não
+necessariamente novo dado de resultado.
+
+Implicação prática: reexecutar `01_ingestao_bronze.py` com mais frequência do
+que a fonte publica não traz dado novo, só custo de consulta desnecessário
+(BigQuery cobra por volume escaneado — ver FinOps). O streaming implementado
+(ver "Decisões Arquiteturais") já assume essa realidade: é uma simulação que
+demonstra o *padrão* de ingestão incremental, não uma tentativa de capturar
+eventos reais de uma fonte que, na prática, não emite eventos com essa
+cadência. Em produção, o agendamento do batch deveria acompanhar o ciclo de
+publicação do INEP (tipicamente anual), não uma cadência diária/horária.
+
 ### Enriquecimento externo — Atlas do Desenvolvimento Humano (IDHM)
 
 Implementado nesta entrega. Fonte: **Atlas do Desenvolvimento Humano no

@@ -294,7 +294,7 @@
 
 <script id="dashboard-data" type="application/json">
 {
-  "gerado_em": "2026-08-23T22:25:01.885652+00:00",
+  "gerado_em": "2026-08-23T22:48:14.471150+00:00",
   "brasil": {
     "serie": [
       {
@@ -1661,7 +1661,7 @@
     ]
   },
   "qualidade": {
-    "timestamp": "2026-08-23T22:25:19.386652",
+    "timestamp": "2026-08-23T22:48:34.452788",
     "camadas": {
       "bronze": {
         "tabelas_verificadas": 11,
@@ -2253,6 +2253,7 @@
     limitBlock.appendChild(el("h2", { class: "block-title" }, ["Outras limitações conhecidas"]));
     const limitCard = el("div", { class: "card" });
     const ul = el("ul", { style: "margin:0; padding-left:20px; display:flex; flex-direction:column; gap:10px; font-size:13.5px; color:var(--ink-700)" }, [
+      el("li", {}, ["A fonte atualiza pouco: a página do dataset no Base dos Dados registra última atualização em 23/09/2025, mas ainda não há nenhum dado de 2025 nas tabelas — só 2023/2024. O indicador vem da Avaliação de Alfabetização do Saeb, aplicada uma vez por ciclo letivo, não um dado transacional."]),
       el("li", {}, ["IDHM na vintage 2010 (último censo com apuração oficial) — não existe vintage 2020/2022 pública para esse índice."]),
       el("li", {}, ["Os eventos de streaming são sintéticos (gerados para demonstrar o padrão de ingestão incremental) — não entram na análise real, só no monitoramento operacional."]),
       el("li", {}, ["Alertas de erro ficam persistidos em arquivo (data/monitoramento/alertas.jsonl), mas sem canal externo ativo (e-mail/Slack/PagerDuty) nesta entrega."]),
