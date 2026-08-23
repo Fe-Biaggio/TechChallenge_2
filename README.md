@@ -217,6 +217,10 @@ TechChallenge_2/
 ├── docs/
 │   ├── arquitetura/                       # Diagramas (Mermaid + PNG) e decisões
 │   └── [IAST] - Tech Challenge - Fase 2.pdf  # Enunciado original
+├── reports/
+│   ├── dashboard.html                     # Painel analítico — HTML autocontido, gerado
+│   ├── dashboard_template.html            # Template do painel (estrutura/estilo/JS)
+│   └── gerar_dashboard_dados.py           # Gold (+ Silver/alunos) → dashboard.html
 ├── requirements.txt                       # Dependências Python
 ├── pytest.ini                             # Configuração dos testes
 └── README.md
@@ -435,6 +439,32 @@ jupyter lab
 3. [`notebooks/03_camada_gold_analytics.ipynb`](notebooks/03_camada_gold_analytics.ipynb)
 
 ---
+
+## Dashboard Analítico
+
+[`reports/dashboard.html`](reports/dashboard.html) — painel de acompanhamento em HTML
+autocontido (sem servidor, sem dependências externas — abre direto no navegador),
+gerado a partir da camada Gold. Quatro visões, cada uma com histórico, maiores/piores
+e quem mais melhorou/piorou (delta):
+
+- **Brasil** — indicador nacional vs. trajetória oficial da meta (2023–2030)
+- **UF** — histórico das 5 melhores/piores UFs, ranking do ano mais recente,
+  variação UF a UF entre os dois anos disponíveis
+- **Município** — 10 melhores/piores municípios (com faixa de risco e IDHM),
+  10 que mais subiram/caíram no indicador
+- **Aluno** — participação, % alfabetizados e proficiência média histórica,
+  distribuição de proficiência (com a linha do ponto de corte 743), recorte
+  por rede de ensino, e ranking/delta por UF calculado direto dos microdados
+  (complementar ao ranking oficial da aba UF, que usa o indicador agregado)
+
+Para regenerar após rodar a pipeline:
+```bash
+python reports/gerar_dashboard_dados.py
+```
+Lê Gold (+ `alunos` da Silver, só para agregados — nenhum microdado individual
+é exposto no HTML) e escreve `reports/dashboard_data.json` +
+`reports/dashboard.html` (o JSON é injetado em `reports/dashboard_template.html`,
+que contém a estrutura/estilo/JS do painel).
 
 ## Monitoramento da Pipeline
 

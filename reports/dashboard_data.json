@@ -1,0 +1,1362 @@
+{
+  "gerado_em": "2026-08-23T20:43:06.380493+00:00",
+  "brasil": {
+    "serie": [
+      {
+        "ano": 2023,
+        "indicador": 55.9,
+        "variacao_yoy": null
+      },
+      {
+        "ano": 2024,
+        "indicador": 59.2,
+        "variacao_yoy": 3.3
+      },
+      {
+        "ano": 2025,
+        "indicador": 66.0,
+        "variacao_yoy": 6.8
+      }
+    ],
+    "serie_meta": [
+      {
+        "ano": 2024,
+        "meta": 60.0
+      },
+      {
+        "ano": 2025,
+        "meta": 64.0
+      },
+      {
+        "ano": 2026,
+        "meta": 67.0
+      },
+      {
+        "ano": 2027,
+        "meta": 71.0
+      },
+      {
+        "ano": 2028,
+        "meta": 74.0
+      },
+      {
+        "ano": 2029,
+        "meta": 77.0
+      },
+      {
+        "ano": 2030,
+        "meta": 80.0
+      }
+    ],
+    "headline": {
+      "ano_atual": 2025,
+      "indicador_atual": 66.0,
+      "variacao_yoy": 6.8,
+      "meta_2030": 80.0,
+      "gap_meta_2030": 14.0,
+      "delta_periodo": 10.1,
+      "ano_inicial": 2023
+    }
+  },
+  "uf": {
+    "anos": [
+      2023,
+      2024
+    ],
+    "series_por_uf": {
+      "AC": [
+        {
+          "ano": 2024,
+          "indicador": 51.38
+        }
+      ],
+      "AL": [
+        {
+          "ano": 2023,
+          "indicador": 43.88
+        },
+        {
+          "ano": 2024,
+          "indicador": 48.63
+        }
+      ],
+      "AM": [
+        {
+          "ano": 2023,
+          "indicador": 52.2
+        },
+        {
+          "ano": 2024,
+          "indicador": 49.17
+        }
+      ],
+      "AP": [
+        {
+          "ano": 2023,
+          "indicador": 41.56
+        },
+        {
+          "ano": 2024,
+          "indicador": 46.62
+        }
+      ],
+      "BA": [
+        {
+          "ano": 2023,
+          "indicador": 36.78
+        },
+        {
+          "ano": 2024,
+          "indicador": 35.96
+        }
+      ],
+      "CE": [
+        {
+          "ano": 2023,
+          "indicador": 84.46
+        },
+        {
+          "ano": 2024,
+          "indicador": 85.31
+        }
+      ],
+      "ES": [
+        {
+          "ano": 2023,
+          "indicador": 67.93
+        },
+        {
+          "ano": 2024,
+          "indicador": 71.69
+        }
+      ],
+      "GO": [
+        {
+          "ano": 2023,
+          "indicador": 66.74
+        },
+        {
+          "ano": 2024,
+          "indicador": 72.74
+        }
+      ],
+      "MA": [
+        {
+          "ano": 2023,
+          "indicador": 56.43
+        },
+        {
+          "ano": 2024,
+          "indicador": 59.64
+        }
+      ],
+      "MG": [
+        {
+          "ano": 2023,
+          "indicador": 59.81
+        },
+        {
+          "ano": 2024,
+          "indicador": 72.07
+        }
+      ],
+      "MS": [
+        {
+          "ano": 2023,
+          "indicador": 47.45
+        },
+        {
+          "ano": 2024,
+          "indicador": 55.87
+        }
+      ],
+      "MT": [
+        {
+          "ano": 2023,
+          "indicador": 55.03
+        },
+        {
+          "ano": 2024,
+          "indicador": 60.59
+        }
+      ],
+      "PA": [
+        {
+          "ano": 2023,
+          "indicador": 48.38
+        },
+        {
+          "ano": 2024,
+          "indicador": 48.2
+        }
+      ],
+      "PB": [
+        {
+          "ano": 2023,
+          "indicador": 51.12
+        },
+        {
+          "ano": 2024,
+          "indicador": 55.96
+        }
+      ],
+      "PE": [
+        {
+          "ano": 2023,
+          "indicador": 58.95
+        },
+        {
+          "ano": 2024,
+          "indicador": 60.79
+        }
+      ],
+      "PI": [
+        {
+          "ano": 2023,
+          "indicador": 52.48
+        },
+        {
+          "ano": 2024,
+          "indicador": 59.82
+        }
+      ],
+      "PR": [
+        {
+          "ano": 2023,
+          "indicador": 73.12
+        },
+        {
+          "ano": 2024,
+          "indicador": 70.42
+        }
+      ],
+      "RJ": [
+        {
+          "ano": 2023,
+          "indicador": 52.13
+        },
+        {
+          "ano": 2024,
+          "indicador": 55.25
+        }
+      ],
+      "RN": [
+        {
+          "ano": 2023,
+          "indicador": 37.24
+        },
+        {
+          "ano": 2024,
+          "indicador": 39.29
+        }
+      ],
+      "RO": [
+        {
+          "ano": 2023,
+          "indicador": 64.6
+        },
+        {
+          "ano": 2024,
+          "indicador": 62.62
+        }
+      ],
+      "RS": [
+        {
+          "ano": 2023,
+          "indicador": 63.43
+        },
+        {
+          "ano": 2024,
+          "indicador": 44.67
+        }
+      ],
+      "SC": [
+        {
+          "ano": 2023,
+          "indicador": 61.38
+        },
+        {
+          "ano": 2024,
+          "indicador": 62.02
+        }
+      ],
+      "SE": [
+        {
+          "ano": 2023,
+          "indicador": 31.3
+        },
+        {
+          "ano": 2024,
+          "indicador": 38.39
+        }
+      ],
+      "SP": [
+        {
+          "ano": 2023,
+          "indicador": 51.91
+        },
+        {
+          "ano": 2024,
+          "indicador": 58.13
+        }
+      ],
+      "TO": [
+        {
+          "ano": 2023,
+          "indicador": 43.72
+        },
+        {
+          "ano": 2024,
+          "indicador": 50.07
+        }
+      ]
+    },
+    "ranking": [
+      {
+        "sigla_uf": "AC",
+        "indicador_atual": 51.38,
+        "meta_alfabetizacao": null,
+        "gap": null,
+        "atingiu_meta": null,
+        "pct_municipios_meta_atingida": null,
+        "delta": null
+      },
+      {
+        "sigla_uf": "AL",
+        "indicador_atual": 48.63,
+        "meta_alfabetizacao": 49.7,
+        "gap": -1.07,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 54.9,
+        "delta": 4.75
+      },
+      {
+        "sigla_uf": "AM",
+        "indicador_atual": 49.17,
+        "meta_alfabetizacao": 56.8,
+        "gap": -7.63,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 27.08,
+        "delta": -3.03
+      },
+      {
+        "sigla_uf": "AP",
+        "indicador_atual": 46.62,
+        "meta_alfabetizacao": 47.6,
+        "gap": -0.98,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 43.75,
+        "delta": 5.06
+      },
+      {
+        "sigla_uf": "BA",
+        "indicador_atual": 35.96,
+        "meta_alfabetizacao": 43.4,
+        "gap": -7.44,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 19.04,
+        "delta": -0.82
+      },
+      {
+        "sigla_uf": "CE",
+        "indicador_atual": 85.31,
+        "meta_alfabetizacao": 80.0,
+        "gap": 5.31,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 91.3,
+        "delta": 0.85
+      },
+      {
+        "sigla_uf": "ES",
+        "indicador_atual": 71.69,
+        "meta_alfabetizacao": 69.9,
+        "gap": 1.79,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 75.64,
+        "delta": 3.76
+      },
+      {
+        "sigla_uf": "GO",
+        "indicador_atual": 72.74,
+        "meta_alfabetizacao": 68.9,
+        "gap": 3.84,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 80.66,
+        "delta": 6.0
+      },
+      {
+        "sigla_uf": "MA",
+        "indicador_atual": 59.64,
+        "meta_alfabetizacao": 60.3,
+        "gap": -0.66,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 51.85,
+        "delta": 3.21
+      },
+      {
+        "sigla_uf": "MG",
+        "indicador_atual": 72.07,
+        "meta_alfabetizacao": 63.2,
+        "gap": 8.87,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 79.53,
+        "delta": 12.26
+      },
+      {
+        "sigla_uf": "MS",
+        "indicador_atual": 55.87,
+        "meta_alfabetizacao": 52.8,
+        "gap": 3.07,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 65.82,
+        "delta": 8.42
+      },
+      {
+        "sigla_uf": "MT",
+        "indicador_atual": 60.59,
+        "meta_alfabetizacao": 59.2,
+        "gap": 1.39,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 64.03,
+        "delta": 5.56
+      },
+      {
+        "sigla_uf": "PA",
+        "indicador_atual": 48.2,
+        "meta_alfabetizacao": 53.6,
+        "gap": -5.4,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 33.82,
+        "delta": -0.18
+      },
+      {
+        "sigla_uf": "PB",
+        "indicador_atual": 55.96,
+        "meta_alfabetizacao": 55.9,
+        "gap": 0.06,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 51.36,
+        "delta": 4.84
+      },
+      {
+        "sigla_uf": "PE",
+        "indicador_atual": 60.79,
+        "meta_alfabetizacao": 62.4,
+        "gap": -1.61,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 60.87,
+        "delta": 1.84
+      },
+      {
+        "sigla_uf": "PI",
+        "indicador_atual": 59.82,
+        "meta_alfabetizacao": 57.0,
+        "gap": 2.82,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 58.48,
+        "delta": 7.34
+      },
+      {
+        "sigla_uf": "PR",
+        "indicador_atual": 70.42,
+        "meta_alfabetizacao": 74.2,
+        "gap": -3.78,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 46.84,
+        "delta": -2.7
+      },
+      {
+        "sigla_uf": "RJ",
+        "indicador_atual": 55.25,
+        "meta_alfabetizacao": 56.7,
+        "gap": -1.45,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 40.0,
+        "delta": 3.12
+      },
+      {
+        "sigla_uf": "RN",
+        "indicador_atual": 39.29,
+        "meta_alfabetizacao": 43.8,
+        "gap": -4.51,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 48.2,
+        "delta": 2.05
+      },
+      {
+        "sigla_uf": "RO",
+        "indicador_atual": 62.62,
+        "meta_alfabetizacao": 67.1,
+        "gap": -4.48,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 51.92,
+        "delta": -1.98
+      },
+      {
+        "sigla_uf": "RS",
+        "indicador_atual": 44.67,
+        "meta_alfabetizacao": 66.2,
+        "gap": -21.53,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 9.5,
+        "delta": -18.76
+      },
+      {
+        "sigla_uf": "SC",
+        "indicador_atual": 62.02,
+        "meta_alfabetizacao": 64.5,
+        "gap": -2.48,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 55.46,
+        "delta": 0.64
+      },
+      {
+        "sigla_uf": "SE",
+        "indicador_atual": 38.39,
+        "meta_alfabetizacao": 38.3,
+        "gap": 0.09,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 49.33,
+        "delta": 7.09
+      },
+      {
+        "sigla_uf": "SP",
+        "indicador_atual": 58.13,
+        "meta_alfabetizacao": 56.6,
+        "gap": 1.53,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 51.69,
+        "delta": 6.22
+      },
+      {
+        "sigla_uf": "TO",
+        "indicador_atual": 50.07,
+        "meta_alfabetizacao": 49.5,
+        "gap": 0.57,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 56.2,
+        "delta": 6.35
+      }
+    ],
+    "melhores": [
+      {
+        "sigla_uf": "CE",
+        "indicador_atual": 85.31,
+        "meta_alfabetizacao": 80.0,
+        "gap": 5.31,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 91.3,
+        "delta": 0.85
+      },
+      {
+        "sigla_uf": "GO",
+        "indicador_atual": 72.74,
+        "meta_alfabetizacao": 68.9,
+        "gap": 3.84,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 80.66,
+        "delta": 6.0
+      },
+      {
+        "sigla_uf": "MG",
+        "indicador_atual": 72.07,
+        "meta_alfabetizacao": 63.2,
+        "gap": 8.87,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 79.53,
+        "delta": 12.26
+      },
+      {
+        "sigla_uf": "ES",
+        "indicador_atual": 71.69,
+        "meta_alfabetizacao": 69.9,
+        "gap": 1.79,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 75.64,
+        "delta": 3.76
+      },
+      {
+        "sigla_uf": "PR",
+        "indicador_atual": 70.42,
+        "meta_alfabetizacao": 74.2,
+        "gap": -3.78,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 46.84,
+        "delta": -2.7
+      }
+    ],
+    "piores": [
+      {
+        "sigla_uf": "BA",
+        "indicador_atual": 35.96,
+        "meta_alfabetizacao": 43.4,
+        "gap": -7.44,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 19.04,
+        "delta": -0.82
+      },
+      {
+        "sigla_uf": "SE",
+        "indicador_atual": 38.39,
+        "meta_alfabetizacao": 38.3,
+        "gap": 0.09,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 49.33,
+        "delta": 7.09
+      },
+      {
+        "sigla_uf": "RN",
+        "indicador_atual": 39.29,
+        "meta_alfabetizacao": 43.8,
+        "gap": -4.51,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 48.2,
+        "delta": 2.05
+      },
+      {
+        "sigla_uf": "RS",
+        "indicador_atual": 44.67,
+        "meta_alfabetizacao": 66.2,
+        "gap": -21.53,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 9.5,
+        "delta": -18.76
+      },
+      {
+        "sigla_uf": "AP",
+        "indicador_atual": 46.62,
+        "meta_alfabetizacao": 47.6,
+        "gap": -0.98,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 43.75,
+        "delta": 5.06
+      }
+    ],
+    "mais_melhoraram": [
+      {
+        "sigla_uf": "MG",
+        "indicador_atual": 72.07,
+        "meta_alfabetizacao": 63.2,
+        "gap": 8.87,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 79.53,
+        "delta": 12.26
+      },
+      {
+        "sigla_uf": "MS",
+        "indicador_atual": 55.87,
+        "meta_alfabetizacao": 52.8,
+        "gap": 3.07,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 65.82,
+        "delta": 8.42
+      },
+      {
+        "sigla_uf": "PI",
+        "indicador_atual": 59.82,
+        "meta_alfabetizacao": 57.0,
+        "gap": 2.82,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 58.48,
+        "delta": 7.34
+      },
+      {
+        "sigla_uf": "SE",
+        "indicador_atual": 38.39,
+        "meta_alfabetizacao": 38.3,
+        "gap": 0.09,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 49.33,
+        "delta": 7.09
+      },
+      {
+        "sigla_uf": "TO",
+        "indicador_atual": 50.07,
+        "meta_alfabetizacao": 49.5,
+        "gap": 0.57,
+        "atingiu_meta": true,
+        "pct_municipios_meta_atingida": 56.2,
+        "delta": 6.35
+      }
+    ],
+    "mais_pioraram": [
+      {
+        "sigla_uf": "RS",
+        "indicador_atual": 44.67,
+        "meta_alfabetizacao": 66.2,
+        "gap": -21.53,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 9.5,
+        "delta": -18.76
+      },
+      {
+        "sigla_uf": "AM",
+        "indicador_atual": 49.17,
+        "meta_alfabetizacao": 56.8,
+        "gap": -7.63,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 27.08,
+        "delta": -3.03
+      },
+      {
+        "sigla_uf": "PR",
+        "indicador_atual": 70.42,
+        "meta_alfabetizacao": 74.2,
+        "gap": -3.78,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 46.84,
+        "delta": -2.7
+      },
+      {
+        "sigla_uf": "RO",
+        "indicador_atual": 62.62,
+        "meta_alfabetizacao": 67.1,
+        "gap": -4.48,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 51.92,
+        "delta": -1.98
+      },
+      {
+        "sigla_uf": "BA",
+        "indicador_atual": 35.96,
+        "meta_alfabetizacao": 43.4,
+        "gap": -7.44,
+        "atingiu_meta": false,
+        "pct_municipios_meta_atingida": 19.04,
+        "delta": -0.82
+      }
+    ]
+  },
+  "municipio": {
+    "anos": [
+      2023,
+      2024
+    ],
+    "total_municipios_avaliados": 5516,
+    "melhores": [
+      {
+        "id_municipio": "2211605",
+        "nome_municipio": "Vila Nova do Piauí",
+        "sigla_uf": "PI",
+        "nome_regiao": "Nordeste",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.56
+      },
+      {
+        "id_municipio": "5212055",
+        "nome_municipio": "Jesúpolis",
+        "sigla_uf": "GO",
+        "nome_regiao": "Centro-Oeste",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.65
+      },
+      {
+        "id_municipio": "2603926",
+        "nome_municipio": "Carnaubeira da Penha",
+        "sigla_uf": "PE",
+        "nome_regiao": "Nordeste",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.57
+      },
+      {
+        "id_municipio": "3106804",
+        "nome_municipio": "Bias Fortes",
+        "sigla_uf": "MG",
+        "nome_regiao": "Sudeste",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.62
+      },
+      {
+        "id_municipio": "3168200",
+        "nome_municipio": "Tapiraí",
+        "sigla_uf": "MG",
+        "nome_regiao": "Sudeste",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.67
+      },
+      {
+        "id_municipio": "4204756",
+        "nome_municipio": "Cunhataí",
+        "sigla_uf": "SC",
+        "nome_regiao": "Sul",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.75
+      },
+      {
+        "id_municipio": "2513943",
+        "nome_municipio": "São Domingos do Cariri",
+        "sigla_uf": "PB",
+        "nome_regiao": "Nordeste",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.59
+      },
+      {
+        "id_municipio": "5214101",
+        "nome_municipio": "Mutunópolis",
+        "sigla_uf": "GO",
+        "nome_regiao": "Centro-Oeste",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.68
+      },
+      {
+        "id_municipio": "5218706",
+        "nome_municipio": "Rianápolis",
+        "sigla_uf": "GO",
+        "nome_regiao": "Centro-Oeste",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.69
+      },
+      {
+        "id_municipio": "3556958",
+        "nome_municipio": "Vitória Brasil",
+        "sigla_uf": "SP",
+        "nome_regiao": "Sudeste",
+        "taxa_alfabetizacao": 100.0,
+        "faixa_risco": "Meta próxima/atingida",
+        "idhm": 0.72
+      }
+    ],
+    "piores": [
+      {
+        "id_municipio": "4301750",
+        "nome_municipio": "Barão do Triunfo",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "taxa_alfabetizacao": 4.4,
+        "faixa_risco": "Crítico",
+        "idhm": 0.61
+      },
+      {
+        "id_municipio": "1704600",
+        "nome_municipio": "Chapada de Areia",
+        "sigla_uf": "TO",
+        "nome_regiao": "Norte",
+        "taxa_alfabetizacao": 6.25,
+        "faixa_risco": "Crítico",
+        "idhm": 0.62
+      },
+      {
+        "id_municipio": "1712702",
+        "nome_municipio": "Mateiros",
+        "sigla_uf": "TO",
+        "nome_regiao": "Norte",
+        "taxa_alfabetizacao": 9.09,
+        "faixa_risco": "Crítico",
+        "idhm": 0.61
+      },
+      {
+        "id_municipio": "2414456",
+        "nome_municipio": "Triunfo Potiguar",
+        "sigla_uf": "RN",
+        "nome_regiao": "Nordeste",
+        "taxa_alfabetizacao": 10.95,
+        "faixa_risco": "Crítico",
+        "idhm": 0.6
+      },
+      {
+        "id_municipio": "4320453",
+        "nome_municipio": "Sério",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "taxa_alfabetizacao": 11.1,
+        "faixa_risco": "Crítico",
+        "idhm": 0.65
+      },
+      {
+        "id_municipio": "2805109",
+        "nome_municipio": "Pedrinhas",
+        "sigla_uf": "SE",
+        "nome_regiao": "Nordeste",
+        "taxa_alfabetizacao": 11.52,
+        "faixa_risco": "Crítico",
+        "idhm": 0.59
+      },
+      {
+        "id_municipio": "2203354",
+        "nome_municipio": "Dirceu Arcoverde",
+        "sigla_uf": "PI",
+        "nome_regiao": "Nordeste",
+        "taxa_alfabetizacao": 11.96,
+        "faixa_risco": "Crítico",
+        "idhm": 0.56
+      },
+      {
+        "id_municipio": "2919900",
+        "nome_municipio": "Macururé",
+        "sigla_uf": "BA",
+        "nome_regiao": "Nordeste",
+        "taxa_alfabetizacao": 12.5,
+        "faixa_risco": "Crítico",
+        "idhm": 0.6
+      },
+      {
+        "id_municipio": "1707702",
+        "nome_municipio": "Filadélfia",
+        "sigla_uf": "TO",
+        "nome_regiao": "Norte",
+        "taxa_alfabetizacao": 12.63,
+        "faixa_risco": "Crítico",
+        "idhm": 0.62
+      },
+      {
+        "id_municipio": "2902252",
+        "nome_municipio": "Arataca",
+        "sigla_uf": "BA",
+        "nome_regiao": "Nordeste",
+        "taxa_alfabetizacao": 13.11,
+        "faixa_risco": "Crítico",
+        "idhm": 0.56
+      }
+    ],
+    "mais_melhoraram": [
+      {
+        "id_municipio": "2515005",
+        "nome_municipio": "São Miguel de Taipu",
+        "sigla_uf": "PB",
+        "nome_regiao": "Nordeste",
+        "delta": 89.93,
+        "taxa_inicial": 10.07,
+        "taxa_atual": 100.0
+      },
+      {
+        "id_municipio": "5101209",
+        "nome_municipio": "Araguainha",
+        "sigla_uf": "MT",
+        "nome_regiao": "Centro-Oeste",
+        "delta": 77.78,
+        "taxa_inicial": 22.22,
+        "taxa_atual": 100.0
+      },
+      {
+        "id_municipio": "2101939",
+        "nome_municipio": "Bernardo do Mearim",
+        "sigla_uf": "MA",
+        "nome_regiao": "Nordeste",
+        "delta": 75.04,
+        "taxa_inicial": 12.84,
+        "taxa_atual": 87.88
+      },
+      {
+        "id_municipio": "2206753",
+        "nome_municipio": "Nossa Senhora de Nazaré",
+        "sigla_uf": "PI",
+        "nome_regiao": "Nordeste",
+        "delta": 73.5,
+        "taxa_inicial": 21.74,
+        "taxa_atual": 95.24
+      },
+      {
+        "id_municipio": "2515807",
+        "nome_municipio": "Serra Redonda",
+        "sigla_uf": "PB",
+        "nome_regiao": "Nordeste",
+        "delta": 71.16,
+        "taxa_inicial": 14.55,
+        "taxa_atual": 85.71
+      },
+      {
+        "id_municipio": "5214804",
+        "nome_municipio": "Nova Aurora",
+        "sigla_uf": "GO",
+        "nome_regiao": "Centro-Oeste",
+        "delta": 69.92,
+        "taxa_inicial": 14.29,
+        "taxa_atual": 84.21
+      },
+      {
+        "id_municipio": "2504207",
+        "nome_municipio": "Catingueira",
+        "sigla_uf": "PB",
+        "nome_regiao": "Nordeste",
+        "delta": 63.29,
+        "taxa_inicial": 32.79,
+        "taxa_atual": 96.08
+      },
+      {
+        "id_municipio": "2508406",
+        "nome_municipio": "Lastro",
+        "sigla_uf": "PB",
+        "nome_regiao": "Nordeste",
+        "delta": 61.99,
+        "taxa_inicial": 20.77,
+        "taxa_atual": 82.76
+      },
+      {
+        "id_municipio": "4205191",
+        "nome_municipio": "Ermo",
+        "sigla_uf": "SC",
+        "nome_regiao": "Sul",
+        "delta": 61.15,
+        "taxa_inicial": 8.81,
+        "taxa_atual": 69.96
+      },
+      {
+        "id_municipio": "2205102",
+        "nome_municipio": "Itaueira",
+        "sigla_uf": "PI",
+        "nome_regiao": "Nordeste",
+        "delta": 60.75,
+        "taxa_inicial": 25.15,
+        "taxa_atual": 85.9
+      }
+    ],
+    "mais_pioraram": [
+      {
+        "id_municipio": "4301750",
+        "nome_municipio": "Barão do Triunfo",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "delta": -83.83,
+        "taxa_inicial": 88.23,
+        "taxa_atual": 4.4
+      },
+      {
+        "id_municipio": "4301073",
+        "nome_municipio": "Arroio do Padre",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "delta": -76.38,
+        "taxa_inicial": 94.58,
+        "taxa_atual": 18.2
+      },
+      {
+        "id_municipio": "4320453",
+        "nome_municipio": "Sério",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "delta": -74.31,
+        "taxa_inicial": 85.41,
+        "taxa_atual": 11.1
+      },
+      {
+        "id_municipio": "4302584",
+        "nome_municipio": "Bozano",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "delta": -72.7,
+        "taxa_inicial": 100.0,
+        "taxa_atual": 27.3
+      },
+      {
+        "id_municipio": "4321493",
+        "nome_municipio": "Toropi",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "delta": -61.3,
+        "taxa_inicial": 100.0,
+        "taxa_atual": 38.7
+      },
+      {
+        "id_municipio": "4321634",
+        "nome_municipio": "Três Arroios",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "delta": -60.0,
+        "taxa_inicial": 100.0,
+        "taxa_atual": 40.0
+      },
+      {
+        "id_municipio": "4313334",
+        "nome_municipio": "Nova Ramada",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "delta": -58.97,
+        "taxa_inicial": 86.97,
+        "taxa_atual": 28.0
+      },
+      {
+        "id_municipio": "4311643",
+        "nome_municipio": "Linha Nova",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "delta": -58.8,
+        "taxa_inicial": 100.0,
+        "taxa_atual": 41.2
+      },
+      {
+        "id_municipio": "2100808",
+        "nome_municipio": "Anapurus",
+        "sigla_uf": "MA",
+        "nome_regiao": "Nordeste",
+        "delta": -56.42,
+        "taxa_inicial": 91.05,
+        "taxa_atual": 34.63
+      },
+      {
+        "id_municipio": "4308805",
+        "nome_municipio": "General Câmara",
+        "sigla_uf": "RS",
+        "nome_regiao": "Sul",
+        "delta": -55.86,
+        "taxa_inicial": 77.96,
+        "taxa_atual": 22.1
+      }
+    ]
+  },
+  "aluno": {
+    "ponto_corte_saeb": 743,
+    "historico": [
+      {
+        "ano": 2023,
+        "total_avaliados": 1503058,
+        "pct_alfabetizado": 58.38,
+        "proficiencia_media": 747.56
+      },
+      {
+        "ano": 2024,
+        "total_avaliados": 1852788,
+        "pct_alfabetizado": 59.75,
+        "proficiencia_media": 749.04
+      }
+    ],
+    "distribuicao_proficiencia": [
+      {
+        "faixa_min": 560,
+        "faixa_max": 580,
+        "contagem": 0
+      },
+      {
+        "faixa_min": 580,
+        "faixa_max": 600,
+        "contagem": 102
+      },
+      {
+        "faixa_min": 600,
+        "faixa_max": 620,
+        "contagem": 6583
+      },
+      {
+        "faixa_min": 620,
+        "faixa_max": 640,
+        "contagem": 22937
+      },
+      {
+        "faixa_min": 640,
+        "faixa_max": 660,
+        "contagem": 49692
+      },
+      {
+        "faixa_min": 660,
+        "faixa_max": 680,
+        "contagem": 91588
+      },
+      {
+        "faixa_min": 680,
+        "faixa_max": 700,
+        "contagem": 132065
+      },
+      {
+        "faixa_min": 700,
+        "faixa_max": 720,
+        "contagem": 155337
+      },
+      {
+        "faixa_min": 720,
+        "faixa_max": 740,
+        "contagem": 241246
+      },
+      {
+        "faixa_min": 740,
+        "faixa_max": 760,
+        "contagem": 333399
+      },
+      {
+        "faixa_min": 760,
+        "faixa_max": 780,
+        "contagem": 349616
+      },
+      {
+        "faixa_min": 780,
+        "faixa_max": 800,
+        "contagem": 241010
+      },
+      {
+        "faixa_min": 800,
+        "faixa_max": 820,
+        "contagem": 129082
+      },
+      {
+        "faixa_min": 820,
+        "faixa_max": 840,
+        "contagem": 68819
+      },
+      {
+        "faixa_min": 840,
+        "faixa_max": 860,
+        "contagem": 21110
+      },
+      {
+        "faixa_min": 860,
+        "faixa_max": 880,
+        "contagem": 6794
+      },
+      {
+        "faixa_min": 880,
+        "faixa_max": 900,
+        "contagem": 2401
+      },
+      {
+        "faixa_min": 900,
+        "faixa_max": 920,
+        "contagem": 71
+      }
+    ],
+    "por_rede": [
+      {
+        "rede": "Municipal",
+        "total_avaliados": 1611591,
+        "pct_alfabetizado": 59.34,
+        "proficiencia_media": 748.56
+      },
+      {
+        "rede": "Estadual",
+        "total_avaliados": 241173,
+        "pct_alfabetizado": 62.51,
+        "proficiencia_media": 752.28
+      },
+      {
+        "rede": "Privada",
+        "total_avaliados": 24,
+        "pct_alfabetizado": 66.67,
+        "proficiencia_media": 756.63
+      }
+    ],
+    "melhores_uf": [
+      {
+        "sigla_uf": "CE",
+        "total_avaliados": 88158,
+        "pct_alfabetizado": 85.33,
+        "proficiencia_media": 797.35
+      },
+      {
+        "sigla_uf": "GO",
+        "total_avaliados": 71053,
+        "pct_alfabetizado": 72.76,
+        "proficiencia_media": 759.35
+      },
+      {
+        "sigla_uf": "ES",
+        "total_avaliados": 42751,
+        "pct_alfabetizado": 72.09,
+        "proficiencia_media": 758.98
+      },
+      {
+        "sigla_uf": "MG",
+        "total_avaliados": 180771,
+        "pct_alfabetizado": 72.59,
+        "proficiencia_media": 758.78
+      },
+      {
+        "sigla_uf": "PI",
+        "total_avaliados": 31182,
+        "pct_alfabetizado": 60.12,
+        "proficiencia_media": 755.38
+      }
+    ],
+    "piores_uf": [
+      {
+        "sigla_uf": "SE",
+        "total_avaliados": 18033,
+        "pct_alfabetizado": 38.07,
+        "proficiencia_media": 723.81
+      },
+      {
+        "sigla_uf": "BA",
+        "total_avaliados": 104069,
+        "pct_alfabetizado": 35.96,
+        "proficiencia_media": 725.58
+      },
+      {
+        "sigla_uf": "RN",
+        "total_avaliados": 22848,
+        "pct_alfabetizado": 39.96,
+        "proficiencia_media": 731.22
+      },
+      {
+        "sigla_uf": "PA",
+        "total_avaliados": 83193,
+        "pct_alfabetizado": 48.77,
+        "proficiencia_media": 733.51
+      },
+      {
+        "sigla_uf": "AM",
+        "total_avaliados": 46628,
+        "pct_alfabetizado": 49.84,
+        "proficiencia_media": 734.75
+      }
+    ],
+    "mais_melhoraram_uf": [
+      {
+        "sigla_uf": "SE",
+        "proficiencia_inicial": 713.49,
+        "proficiencia_atual": 723.81,
+        "delta": 10.31
+      },
+      {
+        "sigla_uf": "PI",
+        "proficiencia_inicial": 745.57,
+        "proficiencia_atual": 755.38,
+        "delta": 9.81
+      },
+      {
+        "sigla_uf": "PB",
+        "proficiencia_inicial": 742.1,
+        "proficiencia_atual": 751.47,
+        "delta": 9.37
+      },
+      {
+        "sigla_uf": "TO",
+        "proficiencia_inicial": 734.33,
+        "proficiencia_atual": 742.93,
+        "delta": 8.6
+      },
+      {
+        "sigla_uf": "AP",
+        "proficiencia_inicial": 732.59,
+        "proficiencia_atual": 740.64,
+        "delta": 8.05
+      }
+    ],
+    "mais_pioraram_uf": [
+      {
+        "sigla_uf": "RO",
+        "proficiencia_inicial": 760.22,
+        "proficiencia_atual": 745.91,
+        "delta": -14.31
+      },
+      {
+        "sigla_uf": "RS",
+        "proficiencia_inicial": 748.54,
+        "proficiencia_atual": 735.62,
+        "delta": -12.92
+      },
+      {
+        "sigla_uf": "MA",
+        "proficiencia_inicial": 750.62,
+        "proficiencia_atual": 746.29,
+        "delta": -4.33
+      },
+      {
+        "sigla_uf": "AM",
+        "proficiencia_inicial": 737.52,
+        "proficiencia_atual": 734.75,
+        "delta": -2.77
+      },
+      {
+        "sigla_uf": "PR",
+        "proficiencia_inicial": 757.79,
+        "proficiencia_atual": 755.04,
+        "delta": -2.75
+      }
+    ]
+  }
+}

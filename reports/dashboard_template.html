@@ -1,0 +1,747 @@
+<title>Painel Criança Alfabetizada</title>
+<style>
+  :root {
+    --bg: #F2F4F2;
+    --surface: #FFFFFF;
+    --surface-2: #E7ECE7;
+    --ink-900: #16231F;
+    --ink-700: #33453F;
+    --ink-500: #5E6E68;
+    --border: #D3DAD3;
+    --accent: #1F6F5C;
+    --accent-strong: #154A3D;
+    --accent-soft: #DCEEE8;
+    --status-warning: #A9701F;
+    --status-adequate: #215F9E;
+    --status-target: #1F7A52;
+    --status-critical: #B23A2E;
+    --delta-pos: #1F7A52;
+    --delta-neg: #B23A2E;
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141F1B;
+      --surface: #1A2620;
+      --surface-2: #213028;
+      --ink-900: #EAF1EC;
+      --ink-700: #C3D1CA;
+      --ink-500: #8FA39A;
+      --border: #2E3F37;
+      --accent: #4FB89C;
+      --accent-strong: #7DD4BB;
+      --accent-soft: #1E3D34;
+      --status-warning: #C97A28;
+      --status-adequate: #4F94C9;
+      --status-target: #3F9E6B;
+      --status-critical: #E2685A;
+      --delta-pos: #3F9E6B;
+      --delta-neg: #E2685A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141F1B;
+    --surface: #1A2620;
+    --surface-2: #213028;
+    --ink-900: #EAF1EC;
+    --ink-700: #C3D1CA;
+    --ink-500: #8FA39A;
+    --border: #2E3F37;
+    --accent: #4FB89C;
+    --accent-strong: #7DD4BB;
+    --accent-soft: #1E3D34;
+    --status-warning: #C97A28;
+    --status-adequate: #4F94C9;
+    --status-target: #3F9E6B;
+    --status-critical: #E2685A;
+    --delta-pos: #3F9E6B;
+    --delta-neg: #E2685A;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink-900);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  ::selection { background: var(--accent-soft); }
+
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ── Header ──────────────────────────────────────────────────────────── */
+  header.top {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .top-inner {
+    max-width: 1180px; margin: 0 auto;
+    padding: 18px 24px 0 24px;
+  }
+  .eyebrow {
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600;
+  }
+  h1.title {
+    font-family: var(--font-display);
+    font-size: 27px; margin: 4px 0 2px 0; font-weight: 600;
+    text-wrap: balance;
+  }
+  .subtitle { color: var(--ink-500); font-size: 13.5px; margin: 0 0 14px 0; }
+
+  nav.tabs { display: flex; gap: 4px; }
+  nav.tabs button {
+    appearance: none; border: none; background: none; cursor: pointer;
+    font-family: var(--font-body); font-size: 14.5px; font-weight: 600;
+    color: var(--ink-500);
+    padding: 10px 16px; border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid transparent;
+    transition: color .15s ease, background .15s ease;
+  }
+  nav.tabs button:hover { color: var(--ink-900); background: var(--surface-2); }
+  nav.tabs button.active { color: var(--accent-strong); border-bottom-color: var(--accent); }
+  nav.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* ── Layout ──────────────────────────────────────────────────────────── */
+  main { flex: 1; max-width: 1180px; margin: 0 auto; padding: 28px 24px 64px 24px; width: 100%; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadein .25s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .panel.active { animation: none; } }
+
+  section.block { margin-bottom: 30px; }
+  h2.block-title {
+    font-family: var(--font-display); font-size: 18px; font-weight: 600;
+    margin: 0 0 3px 0;
+  }
+  p.block-note { color: var(--ink-500); font-size: 13px; margin: 0 0 14px 0; max-width: 68ch; }
+
+  /* ── Stat tiles ──────────────────────────────────────────────────────── */
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 26px; }
+  .stat-tile {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .stat-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-500); font-weight: 600; }
+  .stat-value {
+    font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-top: 4px;
+    font-variant-numeric: tabular-nums; text-wrap: balance;
+  }
+  .stat-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12.5px; font-weight: 600; margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-chip.pos { color: var(--delta-pos); }
+  .stat-chip.neg { color: var(--delta-neg); }
+  .stat-chip.neutral { color: var(--ink-500); }
+
+  /* ── Cards / charts ──────────────────────────────────────────────────── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-700); }
+  .legend-swatch { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  svg.chart text { font-family: var(--font-body); fill: var(--ink-500); }
+  svg.chart .value-label { fill: var(--ink-900); font-weight: 600; font-variant-numeric: tabular-nums; }
+  svg.chart .grid-line { stroke: var(--border); stroke-width: 1; }
+  svg.chart .axis-label { font-size: 10.5px; }
+
+  .hit-target { cursor: pointer; }
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 100;
+    background: var(--ink-900); color: var(--bg);
+    font-size: 12.5px; padding: 7px 10px; border-radius: 7px;
+    opacity: 0; transition: opacity .1s ease;
+    box-shadow: 0 6px 18px rgba(0,0,0,.18);
+    max-width: 240px; font-variant-numeric: tabular-nums;
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip strong { display: block; margin-bottom: 2px; font-weight: 700; }
+
+  /* ── Ranking bar lists ───────────────────────────────────────────────── */
+  .rank-list { display: flex; flex-direction: column; gap: 9px; }
+  .rank-row { display: grid; grid-template-columns: 20px 46px 1fr 62px; align-items: center; gap: 10px; }
+  .rank-pos { font-size: 12px; color: var(--ink-500); font-variant-numeric: tabular-nums; text-align: right; }
+  .rank-label { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rank-bar-track { position: relative; height: 20px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
+  .rank-bar-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 5px; }
+  .rank-value { font-size: 13px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ── Diverging bars ──────────────────────────────────────────────────── */
+  .diverging-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 3px 0; }
+  .diverging-label-center {
+    text-align: center; font-size: 12.5px; color: var(--ink-700); font-weight: 700;
+    white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 92px;
+  }
+  .diverging-bar-wrap { position: relative; height: 16px; }
+  .diverging-bar-wrap.left { justify-self: end; width: 100%; }
+  .diverging-bar { position: absolute; top: 0; height: 100%; border-radius: 4px; }
+
+  /* ── Tables ──────────────────────────────────────────────────────────── */
+  .table-scroll { overflow-x: auto; }
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.data-table th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--ink-500); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  table.data-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 13px; }
+  table.data-table tr:last-child td { border-bottom: none; }
+  table.data-table tr:hover td { background: var(--surface-2); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 100px;
+    white-space: nowrap;
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .pill.critico { background: color-mix(in srgb, var(--status-critical) 16%, transparent); color: var(--status-critical); }
+  .pill.atencao { background: color-mix(in srgb, var(--status-warning) 16%, transparent); color: var(--status-warning); }
+  .pill.adequado { background: color-mix(in srgb, var(--status-adequate) 16%, transparent); color: var(--status-adequate); }
+  .pill.meta { background: color-mix(in srgb, var(--status-target) 16%, transparent); color: var(--status-target); }
+
+  footer.foot {
+    max-width: 1180px; margin: 0 auto; padding: 0 24px 40px 24px;
+    color: var(--ink-500); font-size: 12px;
+  }
+  footer.foot a { color: var(--ink-500); }
+
+  @media (max-width: 620px) {
+    .rank-row { grid-template-columns: 16px 38px 1fr 52px; gap: 6px; }
+    h1.title { font-size: 22px; }
+  }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="top-inner">
+      <div class="eyebrow">Compromisso Nacional Criança Alfabetizada</div>
+      <h1 class="title">Painel de Acompanhamento — Indicador Criança Alfabetizada</h1>
+      <p class="subtitle">Camada Gold do pipeline · atualizado a cada execução de <code>03_agregacao_gold.py</code></p>
+      <nav class="tabs" role="tablist">
+        <button data-tab="brasil" class="active" role="tab" aria-selected="true">Brasil</button>
+        <button data-tab="uf" role="tab" aria-selected="false">UF</button>
+        <button data-tab="municipio" role="tab" aria-selected="false">Município</button>
+        <button data-tab="aluno" role="tab" aria-selected="false">Aluno</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section id="panel-brasil" class="panel active"></section>
+    <section id="panel-uf" class="panel"></section>
+    <section id="panel-municipio" class="panel"></section>
+    <section id="panel-aluno" class="panel"></section>
+  </main>
+
+  <footer class="foot">
+    Fonte: INEP / Base dos Dados — Indicador Criança Alfabetizada (ponto de corte 743 na escala Saeb). IDHM: Atlas do Desenvolvimento Humano (IPEA/PNUD/FJP), censo 2010.
+    Dados gerados em <span id="gerado-em"></span>.
+  </footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script id="dashboard-data" type="application/json">
+__DASHBOARD_DATA_JSON__
+</script>
+
+<script>
+(function () {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("dashboard-data").textContent);
+  const tooltipEl = document.getElementById("tooltip");
+  const fmt1 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const fmt0 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
+  const fmtInt = new Intl.NumberFormat("pt-BR");
+
+  function el(tag, attrs, children) {
+    const e = document.createElement(tag);
+    if (attrs) for (const k in attrs) {
+      if (k === "class") e.className = attrs[k];
+      else if (k === "html") e.innerHTML = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    }
+    (children || []).forEach((c) => { if (c) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function svgEl(tag, attrs) {
+    const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function showTooltip(x, y, html) {
+    tooltipEl.innerHTML = html;
+    tooltipEl.style.left = (x + 14) + "px";
+    tooltipEl.style.top = (y + 14) + "px";
+    tooltipEl.classList.add("visible");
+  }
+  function hideTooltip() { tooltipEl.classList.remove("visible"); }
+
+  function faixaClass(faixa) {
+    if (!faixa) return "adequado";
+    if (faixa.startsWith("Crít")) return "critico";
+    if (faixa.startsWith("Aten")) return "atencao";
+    if (faixa.startsWith("Meta")) return "meta";
+    return "adequado";
+  }
+  function pillFaixa(faixa) {
+    return `<span class="pill ${faixaClass(faixa)}"><span class="dot" style="background:currentColor"></span>${faixa}</span>`;
+  }
+  function chipDelta(value, suffix) {
+    if (value === null || value === undefined) return `<span class="stat-chip neutral">sem dado anterior</span>`;
+    const cls = value > 0 ? "pos" : value < 0 ? "neg" : "neutral";
+    const sign = value > 0 ? "▲" : value < 0 ? "▼" : "•";
+    return `<span class="stat-chip ${cls}">${sign} ${fmt1.format(Math.abs(value))}${suffix || ""} vs. ano anterior</span>`;
+  }
+
+  // ── Line chart (single or multi-series), optional dashed reference series ──
+  function lineChart(container, { series, refSeries, height = 220, yFormat = fmt1, yUnit = "", xKey = "ano", yKey = "indicador" }) {
+    const width = 640;
+    const padL = 40, padR = 18, padT = 16, padB = 26;
+    const allPoints = series.flatMap((s) => s.data);
+    const allY = allPoints.map((d) => d[yKey]).concat((refSeries || []).flatMap((s) => s.data.map((d) => d[yKey])));
+    const allX = allPoints.map((d) => d[xKey]).concat((refSeries || []).flatMap((s) => s.data.map((d) => d[xKey])));
+    const yMin = Math.min(...allY, 0) - 2;
+    const yMax = Math.max(...allY) + 4;
+    const xMin = Math.min(...allX), xMax = Math.max(...allX);
+    const xScale = (x) => padL + (xMax === xMin ? 0.5 : (x - xMin) / (xMax - xMin)) * (width - padL - padR);
+    const yScale = (y) => height - padB - ((y - yMin) / (yMax - yMin)) * (height - padT - padB);
+
+    const svg = svgEl("svg", { class: "chart", viewBox: `0 0 ${width} ${height}`, role: "img" });
+
+    // gridlines (3 horizontal)
+    const gridSteps = 4;
+    for (let i = 0; i <= gridSteps; i++) {
+      const yVal = yMin + (i / gridSteps) * (yMax - yMin);
+      const y = yScale(yVal);
+      svg.appendChild(svgEl("line", { class: "grid-line", x1: padL, x2: width - padR, y1: y, y2: y }));
+      const t = svgEl("text", { class: "axis-label", x: 4, y: y + 3 });
+      t.textContent = yFormat.format(yVal) + yUnit;
+      svg.appendChild(t);
+    }
+    // x labels
+    const xVals = [...new Set(allX)].sort((a, b) => a - b);
+    xVals.forEach((x) => {
+      const t = svgEl("text", { class: "axis-label", x: xScale(x), y: height - 6, "text-anchor": "middle" });
+      t.textContent = x;
+      svg.appendChild(t);
+    });
+
+    function drawSeries(s, dashed) {
+      const pts = s.data.map((d) => [xScale(d[xKey]), yScale(d[yKey])]);
+      const path = pts.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+      svg.appendChild(svgEl("path", {
+        d: path, fill: "none", stroke: s.color, "stroke-width": dashed ? 2 : 2.5,
+        "stroke-linecap": "round", "stroke-linejoin": "round",
+        "stroke-dasharray": dashed ? "5,5" : "none",
+      }));
+      if (!dashed) {
+        pts.forEach((p, i) => {
+          const d = s.data[i];
+          const c = svgEl("circle", { cx: p[0], cy: p[1], r: 4, fill: s.color, class: "hit-target" });
+          c.addEventListener("mousemove", (ev) => {
+            showTooltip(ev.clientX, ev.clientY, `<strong>${s.name} — ${d[xKey]}</strong>${yFormat.format(d[yKey])}${yUnit}`);
+          });
+          c.addEventListener("mouseleave", hideTooltip);
+          svg.appendChild(c);
+        });
+      }
+    }
+    (refSeries || []).forEach((s) => drawSeries(s, true));
+    series.forEach((s) => drawSeries(s, false));
+
+    container.appendChild(svg);
+  }
+
+  // ── Ranking bar list (single-direction, magnitude) ──
+  function rankingList(container, items, { labelKey, valueKey, suffix = "", color = "var(--accent)", colorFn }) {
+    const max = Math.max(...items.map((i) => i[valueKey]));
+    const list = el("div", { class: "rank-list" });
+    items.forEach((item, i) => {
+      const pct = Math.max(2, (item[valueKey] / max) * 100);
+      const c = colorFn ? colorFn(item) : color;
+      const row = el("div", { class: "rank-row" }, [
+        el("div", { class: "rank-pos" }, [String(i + 1)]),
+        el("div", { class: "rank-label" }, [item[labelKey]]),
+        el("div", { class: "rank-bar-track" }, [
+          el("div", { class: "rank-bar-fill", style: `width:${pct}%; background:${c}` }),
+        ]),
+        el("div", { class: "rank-value" }, [fmt1.format(item[valueKey]) + suffix]),
+      ]);
+      list.appendChild(row);
+    });
+    container.appendChild(list);
+  }
+
+  // ── Diverging bar chart (delta, anchored at 0): label centered, bar grows
+  // left for negative values and right for positive values ──
+  function divergingChartV2(container, items, { labelKey, valueKey, suffix = "" }) {
+    const max = Math.max(...items.map((i) => Math.abs(i[valueKey]))) || 1;
+    const wrap = el("div", { class: "rank-list" });
+    items.forEach((item) => {
+      const v = item[valueKey];
+      const pct = Math.max(3, (Math.abs(v) / max) * 100);
+      const isPos = v >= 0;
+      const row = el("div", { class: "diverging-row" });
+      const leftBar = el("div", { class: "diverging-bar-wrap left" });
+      const rightBar = el("div", { class: "diverging-bar-wrap" });
+      if (!isPos) leftBar.appendChild(el("div", { class: "diverging-bar", style: `right:0; width:${pct}%; background:var(--delta-neg)` }));
+      if (isPos) rightBar.appendChild(el("div", { class: "diverging-bar", style: `left:0; width:${pct}%; background:var(--delta-pos)` }));
+      row.appendChild(leftBar);
+      row.appendChild(el("div", { class: "diverging-label-center" }, [item[labelKey] + " " + (isPos ? "+" : "") + fmt1.format(v) + suffix]));
+      row.appendChild(rightBar);
+      wrap.appendChild(row);
+    });
+    container.appendChild(wrap);
+  }
+
+  // ── Histogram (Aluno proficiência) ──
+  function histogram(container, bins, cutoff) {
+    const width = 640, height = 220, padL = 30, padR = 10, padT = 26, padB = 30;
+    const max = Math.max(...bins.map((b) => b.contagem));
+    const n = bins.length;
+    const bw = (width - padL - padR) / n;
+    const svg = svgEl("svg", { class: "chart", viewBox: `0 0 ${width} ${height}` });
+    bins.forEach((b, i) => {
+      const h = ((b.contagem / max) * (height - padT - padB)) || 0;
+      const x = padL + i * bw;
+      const y = height - padB - h;
+      const isBelow = b.faixa_max <= cutoff;
+      const rect = svgEl("rect", {
+        x: x + 1, y, width: Math.max(bw - 2, 1), height: h, rx: 2,
+        fill: isBelow ? "var(--status-critical)" : "var(--status-target)", class: "hit-target",
+        opacity: 0.88,
+      });
+      rect.addEventListener("mousemove", (ev) => {
+        showTooltip(ev.clientX, ev.clientY, `<strong>${b.faixa_min}–${b.faixa_max} pontos</strong>${fmtInt.format(b.contagem)} alunos`);
+      });
+      rect.addEventListener("mouseleave", hideTooltip);
+      svg.appendChild(rect);
+      if (i % 3 === 0) {
+        const t = svgEl("text", { class: "axis-label", x: x + bw / 2, y: height - 12, "text-anchor": "middle" });
+        t.textContent = b.faixa_min;
+        svg.appendChild(t);
+      }
+    });
+    // cutoff line
+    const cutoffIdx = bins.findIndex((b) => b.faixa_min <= cutoff && cutoff < b.faixa_max);
+    const cx = padL + (cutoffIdx >= 0 ? cutoffIdx : n - 1) * bw;
+    svg.appendChild(svgEl("line", { x1: cx, x2: cx, y1: padT, y2: height - padB, stroke: "var(--ink-700)", "stroke-width": 1.5, "stroke-dasharray": "3,3" }));
+    const lblAtRight = cx < width - 90;
+    const lbl = svgEl("text", {
+      x: lblAtRight ? cx + 5 : cx - 5, y: 15, class: "axis-label", fill: "var(--ink-700)",
+      "text-anchor": lblAtRight ? "start" : "end",
+    });
+    lbl.textContent = `corte ${cutoff}`;
+    svg.appendChild(lbl);
+    container.appendChild(svg);
+  }
+
+  function table(container, rows, columns) {
+    const t = el("table", { class: "data-table" });
+    const thead = el("tr", {}, columns.map((c) => el("th", {}, [c.label])));
+    t.appendChild(el("thead", {}, [thead]));
+    const tbody = el("tbody");
+    rows.forEach((r) => {
+      const tr = el("tr", {}, columns.map((c) => {
+        const td = el("td", { class: c.num ? "num" : "" });
+        if (c.html) td.innerHTML = c.render(r);
+        else td.textContent = c.render(r);
+        return td;
+      }));
+      tbody.appendChild(tr);
+    });
+    t.appendChild(tbody);
+    container.appendChild(el("div", { class: "table-scroll" }, [t]));
+  }
+
+  // ═══════════════════════════════ BRASIL ═══════════════════════════════
+  function renderBrasil() {
+    const panel = document.getElementById("panel-brasil");
+    const d = DATA.brasil;
+    const h = d.headline;
+
+    const stats = el("div", { class: "stat-row" }, [
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, [`Indicador nacional — ${h.ano_atual}`]),
+        el("div", { class: "stat-value" }, [fmt1.format(h.indicador_atual) + "%"]),
+        el("div", { html: chipDelta(h.variacao_yoy, " p.p.") }),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Meta nacional 2030"]),
+        el("div", { class: "stat-value" }, [fmt1.format(h.meta_2030) + "%"]),
+        el("div", { class: "stat-chip neutral" }, [`faltam ${fmt1.format(h.gap_meta_2030)} p.p.`]),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, [`Evolução ${h.ano_inicial}–${h.ano_atual}`]),
+        el("div", { class: "stat-value" }, [(h.delta_periodo >= 0 ? "+" : "") + fmt1.format(h.delta_periodo) + " p.p."]),
+        el("div", { class: "stat-chip neutral" }, ["desde o início da série"]),
+      ]),
+    ]);
+    panel.appendChild(stats);
+
+    const block = el("section", { class: "block" });
+    block.appendChild(el("h2", { class: "block-title" }, ["Histórico do indicador vs. trajetória da meta"]));
+    block.appendChild(el("p", { class: "block-note" }, ["Indicador Criança Alfabetizada realizado (linha cheia) comparado à trajetória oficial de metas do Compromisso Nacional (linha tracejada), até 2030."]));
+    const card = el("div", { class: "card" });
+    card.appendChild(el("div", { class: "legend" }, [
+      el("div", { class: "legend-item" }, [el("span", { class: "legend-swatch", style: "background:var(--accent)" }), "Indicador realizado"]),
+      el("div", { class: "legend-item" }, [el("span", { class: "legend-swatch", style: "background:var(--ink-500)" }), "Meta oficial (trajetória 2024–2030)"]),
+    ]));
+    lineChart(card, {
+      series: [{ name: "Indicador", color: "var(--accent)", data: d.serie }],
+      refSeries: [{ name: "Meta", color: "var(--ink-500)", data: d.serie_meta.map((m) => ({ ano: m.ano, indicador: m.meta })) }],
+      yUnit: "%",
+    });
+    block.appendChild(card);
+    panel.appendChild(block);
+  }
+
+  // ═══════════════════════════════ UF ═══════════════════════════════════
+  function renderUF() {
+    const panel = document.getElementById("panel-uf");
+    const d = DATA.uf;
+    const anoMax = d.anos[d.anos.length - 1];
+    const atingiram = d.ranking.filter((r) => r.atingiu_meta).length;
+
+    panel.appendChild(el("div", { class: "stat-row" }, [
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["UFs avaliadas"]),
+        el("div", { class: "stat-value" }, [String(d.ranking.length)]),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, [`Atingiram a meta estadual (${anoMax})`]),
+        el("div", { class: "stat-value" }, [`${atingiram} / ${d.ranking.length}`]),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Maior indicador"]),
+        el("div", { class: "stat-value" }, [d.melhores[0].sigla_uf]),
+        el("div", { class: "stat-chip pos" }, [fmt1.format(d.melhores[0].indicador_atual) + "%"]),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Menor indicador"]),
+        el("div", { class: "stat-value" }, [d.piores[0].sigla_uf]),
+        el("div", { class: "stat-chip neg" }, [fmt1.format(d.piores[0].indicador_atual) + "%"]),
+      ]),
+    ]));
+
+    const histBlock = el("section", { class: "block" });
+    histBlock.appendChild(el("h2", { class: "block-title" }, ["Histórico — 5 melhores e 5 piores UFs"]));
+    histBlock.appendChild(el("p", { class: "block-note" }, [`Trajetória do indicador por UF entre ${d.anos[0]} e ${anoMax}.`]));
+    const histCard = el("div", { class: "card" });
+    histCard.appendChild(el("div", { class: "legend" }, [
+      el("div", { class: "legend-item" }, [el("span", { class: "legend-dot", style: "background:var(--delta-pos)" }), "5 melhores (indicador atual)"]),
+      el("div", { class: "legend-item" }, [el("span", { class: "legend-dot", style: "background:var(--delta-neg)" }), "5 piores (indicador atual)"]),
+    ]));
+    const series = [
+      ...d.melhores.map((r) => ({ name: r.sigla_uf, color: "var(--delta-pos)", data: d.series_por_uf[r.sigla_uf] })),
+      ...d.piores.map((r) => ({ name: r.sigla_uf, color: "var(--delta-neg)", data: d.series_por_uf[r.sigla_uf] })),
+    ];
+    lineChart(histCard, { series, yUnit: "%" });
+    histBlock.appendChild(histCard);
+    panel.appendChild(histBlock);
+
+    const rankBlock = el("section", { class: "block" });
+    rankBlock.appendChild(el("h2", { class: "block-title" }, [`Maiores e piores — ${anoMax}`]));
+    const rankGrid = el("div", { class: "grid-2" });
+    const c1 = el("div", { class: "card" }, [el("p", { class: "block-note", style: "margin-bottom:12px" }, ["5 melhores indicadores"])]);
+    rankingList(c1, d.melhores, { labelKey: "sigla_uf", valueKey: "indicador_atual", suffix: "%", color: "var(--delta-pos)" });
+    const c2 = el("div", { class: "card" }, [el("p", { class: "block-note", style: "margin-bottom:12px" }, ["5 piores indicadores"])]);
+    rankingList(c2, d.piores, { labelKey: "sigla_uf", valueKey: "indicador_atual", suffix: "%", color: "var(--delta-neg)" });
+    rankGrid.appendChild(c1); rankGrid.appendChild(c2);
+    rankBlock.appendChild(rankGrid);
+    panel.appendChild(rankBlock);
+
+    const deltaBlock = el("section", { class: "block" });
+    deltaBlock.appendChild(el("h2", { class: "block-title" }, [`Quem mais melhorou e quem mais piorou (${d.anos[0]}→${anoMax})`]));
+    deltaBlock.appendChild(el("p", { class: "block-note" }, ["Variação em pontos percentuais do indicador entre os dois anos."]));
+    const deltaCard = el("div", { class: "card" });
+    const combined = [...d.mais_melhoraram, ...[...d.mais_pioraram].reverse()];
+    divergingChartV2(deltaCard, combined, { labelKey: "sigla_uf", valueKey: "delta", suffix: " p.p." });
+    deltaBlock.appendChild(deltaCard);
+    panel.appendChild(deltaBlock);
+  }
+
+  // ═══════════════════════════════ MUNICÍPIO ═════════════════════════════
+  function renderMunicipio() {
+    const panel = document.getElementById("panel-municipio");
+    const d = DATA.municipio;
+    const anoMax = d.anos[d.anos.length - 1];
+
+    panel.appendChild(el("div", { class: "stat-row" }, [
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, [`Municípios avaliados (${anoMax})`]),
+        el("div", { class: "stat-value" }, [fmtInt.format(d.total_municipios_avaliados)]),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Maior indicador"]),
+        el("div", { class: "stat-value" }, [fmt1.format(d.melhores[0].taxa_alfabetizacao) + "%"]),
+        el("div", { class: "stat-chip neutral" }, [d.melhores[0].nome_municipio + "/" + d.melhores[0].sigla_uf]),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Menor indicador"]),
+        el("div", { class: "stat-value" }, [fmt1.format(d.piores[0].taxa_alfabetizacao) + "%"]),
+        el("div", { class: "stat-chip neutral" }, [d.piores[0].nome_municipio + "/" + d.piores[0].sigla_uf]),
+      ]),
+    ]));
+
+    const rankBlock = el("section", { class: "block" });
+    rankBlock.appendChild(el("h2", { class: "block-title" }, [`10 melhores e 10 piores municípios — ${anoMax}`]));
+    const rankGrid = el("div", { class: "grid-2" });
+
+    const c1 = el("div", { class: "card" });
+    table(c1, d.melhores, [
+      { label: "Município", render: (r) => `${r.nome_municipio} / ${r.sigla_uf}` },
+      { label: "Faixa", html: true, render: (r) => pillFaixa(r.faixa_risco) },
+      { label: "Indicador", num: true, render: (r) => fmt1.format(r.taxa_alfabetizacao) + "%" },
+    ]);
+    const c2 = el("div", { class: "card" });
+    table(c2, d.piores, [
+      { label: "Município", render: (r) => `${r.nome_municipio} / ${r.sigla_uf}` },
+      { label: "Faixa", html: true, render: (r) => pillFaixa(r.faixa_risco) },
+      { label: "Indicador", num: true, render: (r) => fmt1.format(r.taxa_alfabetizacao) + "%" },
+    ]);
+    rankGrid.appendChild(c1); rankGrid.appendChild(c2);
+    rankBlock.appendChild(rankGrid);
+    panel.appendChild(rankBlock);
+
+    const deltaBlock = el("section", { class: "block" });
+    deltaBlock.appendChild(el("h2", { class: "block-title" }, [`Quem mais melhorou e quem mais piorou (${d.anos[0]}→${anoMax})`]));
+    deltaBlock.appendChild(el("p", { class: "block-note" }, ["Município precisa ter resultado nos dois anos para entrar nesta comparação."]));
+    const deltaGrid = el("div", { class: "grid-2" });
+    const dc1 = el("div", { class: "card" }, [el("p", { class: "block-note", style: "margin-bottom:12px" }, ["Maiores altas"])]);
+    table(dc1, d.mais_melhoraram, [
+      { label: "Município", render: (r) => `${r.nome_municipio}/${r.sigla_uf}` },
+      { label: "Antes", num: true, render: (r) => fmt1.format(r.taxa_inicial) + "%" },
+      { label: "Agora", num: true, render: (r) => fmt1.format(r.taxa_atual) + "%" },
+      { label: "Δ", num: true, html: true, render: (r) => `<span style="color:var(--delta-pos)">+${fmt1.format(r.delta)}</span>` },
+    ]);
+    const dc2 = el("div", { class: "card" }, [el("p", { class: "block-note", style: "margin-bottom:12px" }, ["Maiores quedas"])]);
+    table(dc2, d.mais_pioraram, [
+      { label: "Município", render: (r) => `${r.nome_municipio}/${r.sigla_uf}` },
+      { label: "Antes", num: true, render: (r) => fmt1.format(r.taxa_inicial) + "%" },
+      { label: "Agora", num: true, render: (r) => fmt1.format(r.taxa_atual) + "%" },
+      { label: "Δ", num: true, html: true, render: (r) => `<span style="color:var(--delta-neg)">${fmt1.format(r.delta)}</span>` },
+    ]);
+    deltaGrid.appendChild(dc1); deltaGrid.appendChild(dc2);
+    deltaBlock.appendChild(deltaGrid);
+    panel.appendChild(deltaBlock);
+  }
+
+  // ═══════════════════════════════ ALUNO ═════════════════════════════════
+  function renderAluno() {
+    const panel = document.getElementById("panel-aluno");
+    const d = DATA.aluno;
+    const hist = d.historico;
+    const atual = hist[hist.length - 1];
+    const anterior = hist.length > 1 ? hist[hist.length - 2] : null;
+
+    panel.appendChild(el("div", { class: "stat-row" }, [
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, [`Alunos avaliados — ${atual.ano}`]),
+        el("div", { class: "stat-value" }, [fmtInt.format(atual.total_avaliados)]),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["% alfabetizados"]),
+        el("div", { class: "stat-value" }, [fmt1.format(atual.pct_alfabetizado) + "%"]),
+        el("div", { html: chipDelta(anterior ? atual.pct_alfabetizado - anterior.pct_alfabetizado : null, " p.p.") }),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Proficiência média (Saeb)"]),
+        el("div", { class: "stat-value" }, [fmt1.format(atual.proficiencia_media)]),
+        el("div", { html: chipDelta(anterior ? atual.proficiencia_media - anterior.proficiencia_media : null, " pts") }),
+      ]),
+      el("div", { class: "stat-tile" }, [
+        el("div", { class: "stat-label" }, ["Ponto de corte Saeb"]),
+        el("div", { class: "stat-value" }, [String(d.ponto_corte_saeb)]),
+        el("div", { class: "stat-chip neutral" }, ["nível considerado alfabetizado"]),
+      ]),
+    ]));
+
+    const histBlock = el("section", { class: "block" });
+    histBlock.appendChild(el("h2", { class: "block-title" }, ["Histórico — participação, alfabetização e proficiência"]));
+    const histGrid = el("div", { class: "grid-2" });
+    const hc1 = el("div", { class: "card" }, [el("p", { class: "block-note", style: "margin-bottom:8px" }, ["% de alunos alfabetizados"])]);
+    lineChart(hc1, { series: [{ name: "% alfabetizados", color: "var(--accent)", data: hist.map((h) => ({ ano: h.ano, indicador: h.pct_alfabetizado })) }], yUnit: "%" });
+    const hc2 = el("div", { class: "card" }, [el("p", { class: "block-note", style: "margin-bottom:8px" }, ["Proficiência média (escala Saeb)"])]);
+    lineChart(hc2, { series: [{ name: "Proficiência média", color: "var(--status-adequate)", data: hist.map((h) => ({ ano: h.ano, indicador: h.proficiencia_media })) }], yUnit: " pts" });
+    histGrid.appendChild(hc1); histGrid.appendChild(hc2);
+    histBlock.appendChild(histGrid);
+    panel.appendChild(histBlock);
+
+    const distBlock = el("section", { class: "block" });
+    distBlock.appendChild(el("h2", { class: "block-title" }, [`Distribuição da proficiência — ${atual.ano}`]));
+    distBlock.appendChild(el("p", { class: "block-note" }, ["Vermelho: abaixo do ponto de corte (não alfabetizado). Verde: no patamar de alfabetização ou acima."]));
+    const distCard = el("div", { class: "card" });
+    histogram(distCard, d.distribuicao_proficiencia, d.ponto_corte_saeb);
+    distBlock.appendChild(distCard);
+    panel.appendChild(distBlock);
+
+    const redeBlock = el("section", { class: "block" });
+    redeBlock.appendChild(el("h2", { class: "block-title" }, [`Por rede de ensino — ${atual.ano}`]));
+    const redeCard = el("div", { class: "card" });
+    table(redeCard, d.por_rede, [
+      { label: "Rede", render: (r) => r.rede },
+      { label: "Avaliados", num: true, render: (r) => fmtInt.format(r.total_avaliados) },
+      { label: "% alfabetizados", num: true, render: (r) => fmt1.format(r.pct_alfabetizado) + "%" },
+      { label: "Proficiência média", num: true, render: (r) => fmt1.format(r.proficiencia_media) },
+    ]);
+    redeBlock.appendChild(redeCard);
+    panel.appendChild(redeBlock);
+
+    const rankBlock = el("section", { class: "block" });
+    rankBlock.appendChild(el("h2", { class: "block-title" }, [`Maiores e menores proficiências por UF — ${atual.ano}`]));
+    rankBlock.appendChild(el("p", { class: "block-note" }, [`Calculado direto dos microdados de aluno (todas as redes). UFs com menos de 300 alunos avaliados ficam fora do ranking.`]));
+    const rankGrid = el("div", { class: "grid-2" });
+    const rc1 = el("div", { class: "card" }, [el("p", { class: "block-note", style: "margin-bottom:12px" }, ["5 melhores"])]);
+    rankingList(rc1, d.melhores_uf, { labelKey: "sigla_uf", valueKey: "proficiencia_media", color: "var(--delta-pos)" });
+    const rc2 = el("div", { class: "card" }, [el("p", { class: "block-note", style: "margin-bottom:12px" }, ["5 piores"])]);
+    rankingList(rc2, d.piores_uf, { labelKey: "sigla_uf", valueKey: "proficiencia_media", color: "var(--delta-neg)" });
+    rankGrid.appendChild(rc1); rankGrid.appendChild(rc2);
+    rankBlock.appendChild(rankGrid);
+    panel.appendChild(rankBlock);
+
+    const deltaBlock = el("section", { class: "block" });
+    deltaBlock.appendChild(el("h2", { class: "block-title" }, ["Quem mais melhorou e mais piorou em proficiência (por UF)"]));
+    const deltaCard = el("div", { class: "card" });
+    const combined = [...d.mais_melhoraram_uf, ...[...d.mais_pioraram_uf].reverse()];
+    divergingChartV2(deltaCard, combined, { labelKey: "sigla_uf", valueKey: "delta", suffix: " pts" });
+    deltaBlock.appendChild(deltaCard);
+    panel.appendChild(deltaBlock);
+  }
+
+  // ── Tabs ──
+  document.querySelectorAll("nav.tabs button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("nav.tabs button").forEach((b) => { b.classList.remove("active"); b.setAttribute("aria-selected", "false"); });
+      document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active"); btn.setAttribute("aria-selected", "true");
+      document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  document.getElementById("gerado-em").textContent = new Date(DATA.gerado_em).toLocaleString("pt-BR");
+
+  renderBrasil();
+  renderUF();
+  renderMunicipio();
+  renderAluno();
+})();
+</script>
