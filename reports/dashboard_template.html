@@ -596,11 +596,6 @@ __DASHBOARD_DATA_JSON__
         el("div", { class: "stat-chip neutral" }, [fmt1.format(d.meta_municipal.pct_atingiram) + "% dos municípios com meta definida"]),
       ]),
       el("div", { class: "stat-tile" }, [
-        el("div", { class: "stat-label" }, ["Maior indicador"]),
-        el("div", { class: "stat-value" }, [fmt1.format(d.melhores[0].taxa_alfabetizacao) + "%"]),
-        el("div", { class: "stat-chip neutral" }, [d.melhores[0].nome_municipio + "/" + d.melhores[0].sigla_uf]),
-      ]),
-      el("div", { class: "stat-tile" }, [
         el("div", { class: "stat-label" }, ["Menor indicador"]),
         el("div", { class: "stat-value" }, [fmt1.format(d.piores[0].taxa_alfabetizacao) + "%"]),
         el("div", { class: "stat-chip neutral" }, [d.piores[0].nome_municipio + "/" + d.piores[0].sigla_uf]),
