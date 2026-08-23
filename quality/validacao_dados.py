@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from pipeline.batch.config import BRONZE_DIR, SILVER_DIR, GOLD_DIR
 from pipeline.batch.utils import get_logger
+from pipeline.monitoring.alertas import disparar_alerta
 
 logger = get_logger(__name__)
 
@@ -86,6 +87,13 @@ REGRAS_BRONZE = {
         "obrigatorias": ["sigla_uf", "ano", "meta_percentual"],
         "max_pct_nulos": 0.0,
     },
+    # Enriquecimento externo (opcional) — só existe se data/raw/atlas_desenvolvimento_humano_municipio.csv existir
+    "idhm_municipio": {
+        "chaves_primarias": ["ANO", "Codmun7"],
+        "obrigatorias": ["ANO", "Codmun7", "IDHM"],
+        "max_pct_nulos": 0.0,
+        "dominio_numerico": {"IDHM": (0.0, 1.0), "IDHM_E": (0.0, 1.0), "IDHM_L": (0.0, 1.0), "IDHM_R": (0.0, 1.0)},
+    },
 }
 
 REGRAS_SILVER = {
@@ -142,6 +150,7 @@ REGRAS_SILVER = {
         "integridade_referencial": {
             "sigla_uf": ("diretorio_uf", "sigla_uf"),
         },
+        "dominio_numerico": {"taxa_alfabetizacao": (0.0, 100.0)},
     },
     # Linhagem de streaming (opcional — só existe se pipeline/streaming/ já rodou)
     "indicador_streaming": {
@@ -154,6 +163,16 @@ REGRAS_SILVER = {
         "obrigatorias": ["sigla_uf", "ano", "meta_percentual"],
         "max_pct_nulos": 0.0,
     },
+    # Enriquecimento externo (opcional) — mesma condição da linhagem acima
+    "idhm_municipio": {
+        "chaves_primarias": ["ano", "id_municipio"],
+        "obrigatorias": ["ano", "id_municipio", "idhm"],
+        "max_pct_nulos": 0.0,
+        "dominio_numerico": {
+            "idhm": (0.0, 1.0), "idhm_educacao": (0.0, 1.0),
+            "idhm_longevidade": (0.0, 1.0), "idhm_renda": (0.0, 1.0),
+        },
+    },
 }
 
 REGRAS_GOLD = {
@@ -161,6 +180,7 @@ REGRAS_GOLD = {
         "chaves_primarias": ["ano", "id_municipio"],
         "obrigatorias": ["ano", "id_municipio", "sigla_uf", "taxa_alfabetizacao"],
         "max_pct_nulos": 40.0,
+        "dominio_numerico": {"taxa_alfabetizacao": (0.0, 100.0)},
     },
     "comparacao_metas_resultados": {
         "chaves_primarias": ["ano", "sigla_uf"],
@@ -262,6 +282,26 @@ def verificar_dominio_uf(df: pd.DataFrame, nome: str) -> list:
     return alertas
 
 
+def verificar_dominio_numerico(df: pd.DataFrame, regra: dict, nome: str) -> list:
+    """Verifica se colunas numéricas estão dentro do intervalo [minimo, maximo] esperado."""
+    alertas = []
+    for coluna, (minimo, maximo) in regra.items():
+        if coluna not in df.columns:
+            continue
+        serie = pd.to_numeric(df[coluna], errors="coerce")
+        fora = ((serie < minimo) | (serie > maximo)) & serie.notna()
+        qtd = int(fora.sum())
+        if qtd:
+            alertas.append({
+                "tipo": "DOMINIO_NUMERICO_INVALIDO",
+                "tabela": nome,
+                "coluna": coluna,
+                "valor": f"{qtd} registros fora de [{minimo}, {maximo}]",
+                "limite": f"[{minimo}, {maximo}]",
+            })
+    return alertas
+
+
 def verificar_integridade_referencial(
     df: pd.DataFrame,
     nome: str,
@@ -303,6 +343,9 @@ def verificar_tabela(
     alertas += verificar_completude(df, regras.get("obrigatorias", []), regras.get("max_pct_nulos", 5.0), nome)
     alertas += verificar_unicidade(df, regras.get("chaves_primarias", []), nome)
     alertas += verificar_dominio_uf(df, nome)
+
+    if "dominio_numerico" in regras:
+        alertas += verificar_dominio_numerico(df, regras["dominio_numerico"], nome)
 
     if "integridade_referencial" in regras:
         alertas += verificar_integridade_referencial(df, nome, regras["integridade_referencial"], camada_dir)
@@ -354,6 +397,12 @@ def validar_camada(camada: str) -> dict:
             logger.warning(f"  [{nome_tabela}] {len(alertas)} alerta(s):")
             for a in alertas:
                 logger.warning(f"    • [{a['tipo']}] {a['coluna']}: {a.get('valor', '')} (limite: {a.get('limite', '')})")
+            disparar_alerta(
+                nivel="WARNING",
+                origem=f"qualidade.{camada}.{nome_tabela}",
+                mensagem=f"{len(alertas)} alerta(s) de qualidade de dados",
+                contexto={"tipos": [a["tipo"] for a in alertas]},
+            )
         else:
             logger.info(f"  [{nome_tabela}] OK — {len(df):,} registros")
 

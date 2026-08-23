@@ -16,7 +16,9 @@ BRONZE_DIR = DATA_DIR / "bronze"
 SILVER_DIR = DATA_DIR / "silver"
 GOLD_DIR = DATA_DIR / "gold"
 
-for _d in [BRONZE_DIR, SILVER_DIR, GOLD_DIR]:
+MONITORAMENTO_DIR = DATA_DIR / "monitoramento"
+
+for _d in [BRONZE_DIR, SILVER_DIR, GOLD_DIR, MONITORAMENTO_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
 
 # ─── Google Cloud / Base dos Dados ────────────────────────────────────────────
@@ -123,6 +125,23 @@ TABELAS = {
         "obrigatoria": True,
     },
 }
+
+# ─── Enriquecimento externo (opcional) ────────────────────────────────────────
+# Atlas do Desenvolvimento Humano no Brasil (IDHM) — IPEA / PNUD / Fundação João
+# Pinheiro. Fonte oficial: basedosdados.org/dataset/cbfc7253-089b-44e2-8825-755e1419efc8
+# (dataset "Atlas do Desenvolvimento Humano"), sem billing_project_id configurado
+# nesta entrega para consultar via BigQuery. O CSV usado aqui é uma redistribuição
+# em formato tabular do mesmo dado oficial (censos 1991/2000/2010), mantida em
+# https://github.com/mauriciocramos/IDHM — mesmo código IBGE de 7 dígitos
+# (Codmun7) usado como id_municipio no restante da pipeline.
+#
+# Não segue o padrão bq_table/raw_file de TABELAS acima porque não há um
+# caminho BigQuery configurado para este dataset nesta entrega — é ingerido
+# só pelo fallback CSV (ver ingerir_idhm_municipio() em 01_ingestao_bronze.py).
+IDHM_RAW_FILE = "atlas_desenvolvimento_humano_municipio.csv"
+# 2010 é o último censo demográfico com apuração oficial do IDHM municipal
+# (o índice depende de dados censitários decenais do IBGE).
+IDHM_ANO_REFERENCIA = 2010
 
 # ─── Streaming ────────────────────────────────────────────────────────────────
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")

@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from pipeline.batch.config import GOLD_DIR, SILVER_DIR, COMPRESSAO_PARQUET
 from pipeline.batch.utils import get_logger, resumo_execucao, timer
+from pipeline.monitoring.alertas import disparar_alerta
 
 logger = get_logger(__name__)
 
@@ -113,6 +114,9 @@ def construir_indicador_municipio(anos: list = None) -> pd.DataFrame:
         "rede_label", "taxa_alfabetizacao", "taxa_alfabetizacao_municipal",
         "meta_alfabetizacao_municipal", "gap_meta_municipal", "atingiu_meta_municipal",
         "indicador_nacional", "gap_indicador_nacional", "faixa_risco",
+        # Enriquecimento externo opcional (Atlas do Desenvolvimento Humano) —
+        # só presente se data/raw/atlas_desenvolvimento_humano_municipio.csv existir.
+        "idhm", "idhm_educacao", "idhm_longevidade", "idhm_renda",
     ]
     gold = df[[c for c in colunas if c in df.columns]].rename(columns={"rede_label": "escopo_rede_headline"})
     gold["dt_processamento"] = datetime.utcnow().isoformat()
@@ -257,6 +261,7 @@ def executar_agregacao_gold(anos: list = None) -> dict:
     except Exception as e:
         logger.error(f"[Gold] Erro ao construir 'indicador_alfabetizacao_municipio': {e}")
         resultados["indicador_alfabetizacao_municipio"] = {"status": "erro", "erro": str(e)}
+        disparar_alerta(nivel="ERROR", origem="gold.indicador_alfabetizacao_municipio", mensagem=str(e))
 
     try:
         df_metas = construir_comparacao_metas(anos)
@@ -265,6 +270,7 @@ def executar_agregacao_gold(anos: list = None) -> dict:
     except Exception as e:
         logger.error(f"[Gold] Erro ao construir 'comparacao_metas_resultados': {e}")
         resultados["comparacao_metas_resultados"] = {"status": "erro", "erro": str(e)}
+        disparar_alerta(nivel="ERROR", origem="gold.comparacao_metas_resultados", mensagem=str(e))
 
     try:
         df_evolucao = construir_evolucao_temporal(anos)
@@ -273,6 +279,7 @@ def executar_agregacao_gold(anos: list = None) -> dict:
     except Exception as e:
         logger.error(f"[Gold] Erro ao construir 'evolucao_temporal': {e}")
         resultados["evolucao_temporal"] = {"status": "erro", "erro": str(e)}
+        disparar_alerta(nivel="ERROR", origem="gold.evolucao_temporal", mensagem=str(e))
 
     try:
         df_monitoramento = construir_monitoramento_streaming()
@@ -284,6 +291,7 @@ def executar_agregacao_gold(anos: list = None) -> dict:
     except Exception as e:
         logger.error(f"[Gold] Erro ao construir 'monitoramento_streaming': {e}")
         resultados["monitoramento_streaming"] = {"status": "erro", "erro": str(e)}
+        disparar_alerta(nivel="ERROR", origem="gold.monitoramento_streaming", mensagem=str(e))
 
     logger.info("AGREGAÇÃO GOLD CONCLUÍDA")
     resumo_execucao(resultados)

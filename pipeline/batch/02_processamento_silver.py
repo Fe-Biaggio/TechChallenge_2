@@ -53,8 +53,10 @@ from pipeline.batch.config import (
     SILVER_DIR,
     COMPRESSAO_PARQUET,
     REDE_MAP,
+    IDHM_ANO_REFERENCIA,
 )
 from pipeline.batch.utils import get_logger, ler_bronze, log_qualidade, resumo_execucao, timer
+from pipeline.monitoring.alertas import disparar_alerta
 
 logger = get_logger(__name__)
 
@@ -323,6 +325,40 @@ def transformar_indicador_streaming() -> pd.DataFrame:
 
 
 @timer
+def transformar_idhm_municipio() -> pd.DataFrame:
+    """
+    Limpa o enriquecimento externo opcional (IDHM municipal — Atlas do
+    Desenvolvimento Humano, ver IDHM_RAW_FILE em config.py). Mantém as 3
+    vintages censitárias (1991/2000/2010) para permitir análise de evolução
+    do IDHM em si; a integração com o indicador de alfabetização (Gold) usa
+    apenas IDHM_ANO_REFERENCIA (2010, último censo com apuração oficial).
+    """
+    df = ler_bronze("idhm_municipio", BRONZE_DIR)
+    df = _padronizar_colunas(df)
+    df = df.rename(columns={"codmun7": "id_municipio", "municipio_nome_atlas": "nome_municipio_atlas"})
+
+    df = _garantir_tipos(df, {"ano": "int16", "id_municipio": "str"})
+    df["id_municipio"] = df["id_municipio"].str.strip()
+
+    for col in ("idhm", "idhm_e", "idhm_l", "idhm_r"):
+        if col in df.columns and df[col].dtype == object:
+            df[col] = df[col].str.replace(",", ".", regex=False).astype(float)
+
+    df = df.rename(columns={"idhm_e": "idhm_educacao", "idhm_l": "idhm_longevidade", "idhm_r": "idhm_renda"})
+    df = _remover_duplicatas(df, ["ano", "id_municipio"], "idhm_municipio")
+
+    fora_do_dominio = df[["idhm", "idhm_educacao", "idhm_longevidade", "idhm_renda"]].apply(
+        lambda s: (s < 0) | (s > 1)
+    ).any(axis=1)
+    if fora_do_dominio.sum():
+        logger.warning(f"[Silver] idhm_municipio: {int(fora_do_dominio.sum())} registros com IDHM fora de [0,1]")
+
+    df["dt_processamento"] = datetime.utcnow().isoformat()
+    log_qualidade(df, "idhm_municipio_silver")
+    return df
+
+
+@timer
 def transformar_meta_streaming() -> pd.DataFrame:
     """Limpa os eventos de streaming (simulados) de atualização/revisão de meta."""
     df = ler_bronze("streaming_metas", BRONZE_DIR)
@@ -387,6 +423,7 @@ def integrar_bases(
     df_indicador_municipio: pd.DataFrame,
     df_diretorio_municipio: pd.DataFrame,
     df_meta_municipio: pd.DataFrame,
+    df_idhm_municipio: pd.DataFrame = None,
 ) -> pd.DataFrame:
     """
     Integra o resultado municipal com o diretório de municípios e a meta
@@ -396,6 +433,12 @@ def integrar_bases(
     > ...), mas a comparação com a meta usa especificamente a rede Municipal
     — meta_municipio só define metas para essa rede, então comparar contra
     o headline (que pode ser 'Pública', um agregado maior) misturaria escopos.
+
+    df_idhm_municipio é opcional (enriquecimento externo — ver
+    transformar_idhm_municipio); quando presente, entra como LEFT JOIN por
+    id_municipio, usando apenas a vintage IDHM_ANO_REFERENCIA (o IDHM não
+    varia ano a ano como o indicador de alfabetização — é um retrato
+    socioeconômico do último censo).
     """
     logger.info("[Silver] Iniciando integração das bases...")
 
@@ -415,6 +458,14 @@ def integrar_bases(
     comparacao["atingiu_meta_municipal"] = comparacao["gap_meta_municipal"] >= 0
 
     integrado = integrado.merge(comparacao, on=["ano", "id_municipio"], how="left")
+
+    if df_idhm_municipio is not None:
+        idhm_ref = df_idhm_municipio[df_idhm_municipio["ano"] == IDHM_ANO_REFERENCIA][
+            ["id_municipio", "idhm", "idhm_educacao", "idhm_longevidade", "idhm_renda"]
+        ]
+        integrado = integrado.merge(idhm_ref, on="id_municipio", how="left")
+        com_idhm = int(integrado["idhm"].notna().sum())
+        logger.info(f"[Silver] Enriquecimento IDHM: {com_idhm:,}/{len(integrado):,} registros com IDHM ({IDHM_ANO_REFERENCIA})")
 
     com_meta = int(integrado["atingiu_meta_municipal"].notna().sum())
     logger.info(f"[Silver] Integração concluída: {len(integrado):,} registros | {com_meta:,} com comparação de meta municipal")
@@ -449,6 +500,8 @@ def executar_processamento_silver(anos: list = None) -> dict:
         # Ver docstring de transformar_indicador_streaming: não entra na integração.
         "indicador_streaming": (transformar_indicador_streaming, ["ano"]),
         "meta_streaming": (transformar_meta_streaming, ["ano"]),
+        # Enriquecimento externo opcional — ver transformar_idhm_municipio.
+        "idhm_municipio": (transformar_idhm_municipio, ["ano"]),
     }
 
     dfs = {}
@@ -464,6 +517,7 @@ def executar_processamento_silver(anos: list = None) -> dict:
         except Exception as e:
             logger.error(f"[Silver] Erro ao processar '{nome}': {e}")
             resultados[nome] = {"status": "erro", "erro": str(e)}
+            disparar_alerta(nivel="ERROR", origem=f"silver.{nome}", mensagem=f"Falha no processamento: {e}")
 
     tabelas_necessarias = ["indicador_municipio", "diretorio_municipio", "meta_municipio"]
     if all(t in dfs for t in tabelas_necessarias):
@@ -472,6 +526,7 @@ def executar_processamento_silver(anos: list = None) -> dict:
                 df_indicador_municipio=dfs["indicador_municipio"],
                 df_diretorio_municipio=dfs["diretorio_municipio"],
                 df_meta_municipio=dfs["meta_municipio"],
+                df_idhm_municipio=dfs.get("idhm_municipio"),
             )
             _salvar_silver(df_integrado, "alfabetizacao_integrado", ["ano"])
             resultados["alfabetizacao_integrado"] = {
@@ -481,6 +536,7 @@ def executar_processamento_silver(anos: list = None) -> dict:
         except Exception as e:
             logger.error(f"[Silver] Erro na integração: {e}")
             resultados["alfabetizacao_integrado"] = {"status": "erro", "erro": str(e)}
+            disparar_alerta(nivel="ERROR", origem="silver.alfabetizacao_integrado", mensagem=f"Falha na integração das bases: {e}")
     else:
         ausentes = [t for t in tabelas_necessarias if t not in dfs]
         logger.warning(f"[Silver] Integração pulada — tabelas ausentes: {ausentes}")

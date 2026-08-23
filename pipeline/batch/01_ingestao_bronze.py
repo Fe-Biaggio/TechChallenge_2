@@ -44,6 +44,7 @@ from pipeline.batch.config import (
     BRONZE_DIR,
     RAW_DIR,
     TABELAS,
+    IDHM_RAW_FILE,
 )
 from pipeline.batch.utils import (
     get_logger,
@@ -52,6 +53,7 @@ from pipeline.batch.utils import (
     resumo_execucao,
     timer,
 )
+from pipeline.monitoring.alertas import disparar_alerta
 
 logger = get_logger(__name__)
 
@@ -169,6 +171,24 @@ def ingerir_tabela(nome_tabela: str, config: dict, anos: list = None) -> tuple:
     return df, "raw"
 
 
+def ingerir_idhm_municipio() -> pd.DataFrame:
+    """
+    Ingestão do enriquecimento externo opcional (IDHM municipal — ver
+    IDHM_RAW_FILE em config.py). Não tem caminho BigQuery configurado nesta
+    entrega, só o CSV; se o arquivo não estiver em data/raw/, o chamador
+    trata como tabela ausente (mesmo padrão das tabelas de streaming).
+    """
+    caminho = RAW_DIR / IDHM_RAW_FILE
+    if not caminho.exists():
+        raise FileNotFoundError(
+            f"Arquivo de enriquecimento externo não encontrado: {caminho} "
+            "(opcional — a pipeline roda normalmente sem ele)"
+        )
+    df = pd.read_csv(caminho, dtype={"Codmun7": "str"})
+    log_qualidade(df, "idhm_municipio")
+    return df
+
+
 @timer
 def executar_ingestao_bronze(anos: list = None) -> dict:
     """
@@ -203,6 +223,26 @@ def executar_ingestao_bronze(anos: list = None) -> dict:
             nivel = logger.error if config.get("obrigatoria") else logger.warning
             nivel(f"Erro ao ingerir '{nome_tabela}': {e}")
             resultados[nome_tabela] = {"status": "erro", "erro": str(e)}
+            disparar_alerta(
+                nivel="ERROR" if config.get("obrigatoria") else "WARNING",
+                origem=f"bronze.{nome_tabela}",
+                mensagem=f"Falha na ingestão: {e}",
+                contexto={"obrigatoria": config.get("obrigatoria", False)},
+            )
+
+    # Enriquecimento externo (opcional) — ver ingerir_idhm_municipio() acima
+    try:
+        df_idhm = ingerir_idhm_municipio()
+        caminho = salvar_bronze(df_idhm, "idhm_municipio", BRONZE_DIR, particoes=[])
+        resultados["idhm_municipio"] = {
+            "status": "sucesso",
+            "fonte": "raw_externo",
+            "registros": len(df_idhm),
+            "caminho": str(caminho),
+        }
+    except FileNotFoundError as e:
+        logger.warning(f"[Bronze] Enriquecimento externo 'idhm_municipio' ausente — pulando ({e})")
+        resultados["idhm_municipio"] = {"status": "ausente_na_bronze"}
 
     logger.info("INGESTÃO BRONZE CONCLUÍDA")
     resumo_execucao(resultados)

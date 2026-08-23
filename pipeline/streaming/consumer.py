@@ -31,6 +31,7 @@ from pipeline.batch.config import (
     KAFKA_TOPIC_METAS,
 )
 from pipeline.batch.utils import get_logger
+from pipeline.monitoring.alertas import disparar_alerta
 
 logger = get_logger(__name__)
 
@@ -38,6 +39,11 @@ DESTINOS_BRONZE = {
     KAFKA_TOPIC_INDICADORES: BRONZE_DIR / "streaming_indicadores",
     KAFKA_TOPIC_METAS: BRONZE_DIR / "streaming_metas",
 }
+
+# Eventos que falham na validação de schema não são descartados silenciosamente
+# — ficam auditáveis em Bronze/streaming_rejeitados (motivo + payload bruto),
+# para que se possa investigar depois por que um produtor enviou dado incompleto.
+DESTINO_REJEITADOS = BRONZE_DIR / "streaming_rejeitados"
 
 SCHEMAS_ESPERADOS = {
     KAFKA_TOPIC_INDICADORES: [
@@ -52,14 +58,42 @@ SCHEMAS_ESPERADOS = {
 }
 
 
-def _validar_evento(evento: dict, topico: str) -> bool:
-    """Verifica se o evento contém os campos obrigatórios do schema."""
+def _validar_evento(evento: dict, topico: str) -> tuple:
+    """Verifica se o evento contém os campos obrigatórios do schema. Retorna (valido, campos_ausentes)."""
     campos_obrigatorios = SCHEMAS_ESPERADOS.get(topico, [])
     ausentes = [c for c in campos_obrigatorios if c not in evento]
     if ausentes:
         logger.warning(f"[Consumer] Evento inválido em {topico} — campos ausentes: {ausentes}")
-        return False
-    return True
+        return False, ausentes
+    return True, []
+
+
+def _persistir_rejeitados(topico: str, invalidos: list) -> Optional[Path]:
+    """Persiste eventos que falharam na validação de schema, com o motivo, para auditoria."""
+    if not invalidos:
+        return None
+
+    DESTINO_REJEITADOS.mkdir(parents=True, exist_ok=True)
+    linhas = [
+        {
+            "topico": topico,
+            "evento_bruto": json.dumps(evento, ensure_ascii=False, default=str),
+            "campos_ausentes": ",".join(motivo),
+            "timestamp_rejeicao": datetime.utcnow().isoformat(),
+        }
+        for evento, motivo in invalidos
+    ]
+    df = pd.DataFrame(linhas)
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+    caminho = DESTINO_REJEITADOS / f"batch_{ts}.parquet"
+
+    pq.write_table(
+        pa.Table.from_pandas(df, preserve_index=False),
+        caminho,
+        compression=COMPRESSAO_PARQUET,
+    )
+    logger.warning(f"[Consumer] {topico}: {len(linhas)} eventos rejeitados → {caminho.name}")
+    return caminho
 
 
 def _persistir_lote(topico: str, eventos: list) -> Optional[Path]:
@@ -125,15 +159,25 @@ class ConsumidorSimulado:
             f"{self.total_processados} processados | "
             f"{self.total_invalidos} inválidos"
         )
+        if self.total_invalidos > 0:
+            disparar_alerta(
+                nivel="WARNING",
+                origem="streaming.consumer",
+                mensagem=f"{self.total_invalidos} evento(s) inválido(s) descartados durante a execução",
+                contexto={"total_processados": self.total_processados, "total_invalidos": self.total_invalidos},
+            )
 
     def _processar_fila(self, topico: str, fila: Queue) -> None:
         buffer = []
+        buffer_rejeitados = []
         while self._rodando:
             try:
                 evento = fila.get(timeout=self.timeout_s)
-                if _validar_evento(evento, topico):
+                valido, motivo = _validar_evento(evento, topico)
+                if valido:
                     buffer.append(evento)
                 else:
+                    buffer_rejeitados.append((evento, motivo))
                     with self._lock:
                         self.total_invalidos += 1
 
@@ -142,6 +186,9 @@ class ConsumidorSimulado:
                     with self._lock:
                         self.total_processados += len(buffer)
                     buffer = []
+                if len(buffer_rejeitados) >= self.batch_size:
+                    _persistir_rejeitados(topico, buffer_rejeitados)
+                    buffer_rejeitados = []
 
             except Empty:
                 if buffer:
@@ -149,6 +196,9 @@ class ConsumidorSimulado:
                     with self._lock:
                         self.total_processados += len(buffer)
                     buffer = []
+                if buffer_rejeitados:
+                    _persistir_rejeitados(topico, buffer_rejeitados)
+                    buffer_rejeitados = []
 
         # Drena o restante ao encerrar
         while not fila.empty():
@@ -160,6 +210,8 @@ class ConsumidorSimulado:
             _persistir_lote(topico, buffer)
             with self._lock:
                 self.total_processados += len(buffer)
+        if buffer_rejeitados:
+            _persistir_rejeitados(topico, buffer_rejeitados)
 
 
 class ConsumidorKafka:
@@ -185,16 +237,22 @@ class ConsumidorKafka:
     def consumir(self, duracao_segundos: int = 60) -> None:
         inicio = time.time()
         buffer: dict[str, list] = {}
+        buffer_rejeitados: dict[str, list] = {}
+        total_invalidos = 0
 
         for msg in self._consumer:
             topico = msg.topic
             evento = msg.value
-            if _validar_evento(evento, topico):
+            valido, motivo = _validar_evento(evento, topico)
+            if valido:
                 buffer.setdefault(topico, []).append(evento)
                 if len(buffer[topico]) >= 10:
                     _persistir_lote(topico, buffer[topico])
                     self.total_processados += len(buffer[topico])
                     buffer[topico] = []
+            else:
+                buffer_rejeitados.setdefault(topico, []).append((evento, motivo))
+                total_invalidos += 1
 
             if time.time() - inicio >= duracao_segundos:
                 break
@@ -204,6 +262,16 @@ class ConsumidorKafka:
             if eventos:
                 _persistir_lote(topico, eventos)
                 self.total_processados += len(eventos)
+        for topico, invalidos in buffer_rejeitados.items():
+            _persistir_rejeitados(topico, invalidos)
+
+        if total_invalidos > 0:
+            disparar_alerta(
+                nivel="WARNING",
+                origem="streaming.consumer_kafka",
+                mensagem=f"{total_invalidos} evento(s) inválido(s) descartados durante a execução",
+                contexto={"total_processados": self.total_processados, "total_invalidos": total_invalidos},
+            )
 
     def fechar(self) -> None:
         self._consumer.close()
