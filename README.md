@@ -29,30 +29,34 @@ Diagramas completos (arquitetura + fluxo de dados/joins) em
 nativamente no GitHub.
 
 ```
-Fontes (BigQuery ou data/raw/*.csv)          Streaming (simulado)
-      │                                    producer.py → consumer.py
-      ▼ Batch                                       │
-┌─────────────┐                ┌──────────────┐     │
-│ Base dos    │ ─────────────► │    BRONZE    │◄────┘
-│ Dados       │                │ 8 tabelas    │  streaming_indicadores/
-│ (INEP)      │                │ batch + 2    │  streaming_metas
-│             │                │ streaming    │
-└─────────────┘                └──────┬───────┘
+Fontes (BigQuery ou data/raw/*.csv)          Streaming (simulado)         Enriquecimento externo
+      │                                    producer.py → consumer.py     (Atlas do Desenv. Humano)
+      ▼ Batch                                       │                            │
+┌─────────────┐                ┌──────────────┐     │                           │
+│ Base dos    │ ─────────────► │    BRONZE    │◄────┘◄──────────────────────────┘
+│ Dados       │                │ 9 tabelas    │  streaming_indicadores/
+│ (INEP)      │                │ batch + 2    │  streaming_metas +
+│             │                │ streaming +  │  streaming_rejeitados (auditoria)
+└─────────────┘                │ 1 rejeitados │
+                                └──────┬───────┘
                                        │  limpeza, decodificação de "rede",
-                                       │  melt de metas, integração
+                                       │  melt de metas, integração + IDHM
                                        ▼
                                 ┌──────────────┐
-                                │    SILVER    │  12 tabelas — 10 batch tratadas
-                                └──────┬───────┘  + 2 streaming (linhagem própria)
+                                │    SILVER    │  14 tabelas — 11 batch tratadas
+                                └──────┬───────┘  + 2 streaming + 1 IDHM (linhagem própria)
                                        │  agregação analítica
                                        ▼
                                 ┌──────────────┐
-                                │     GOLD     │  4 datasets — 3 analíticos
+                                │     GOLD     │  4 datasets — 3 analíticos (com IDHM)
                                 └──────┬───────┘  + 1 monitoramento de streaming
                                        │
                            ┌───────────┼───────────┐
                            ▼           ▼            ▼
                        Dashboard   Análise      Modelos ML
+
+Qualidade (transversal) + Alertas ──valida──► Bronze / Silver / Gold
+  quality/validacao_dados.py              data/monitoramento/alertas.jsonl
 ```
 
 Qualidade de dados (`quality/validacao_dados.py`) valida as três camadas de
@@ -71,10 +75,15 @@ dataset de **monitoramento** na Gold, não `alfabetizacao_integrado`.
 - Ingestão sem transformação: `SELECT *` (BigQuery) ou leitura direta do CSV (fallback)
 - Histórico completo preservado, um diretório por tabela
 - Formato: Parquet particionado por `ano` (tabelas de referência sem partição)
-- 8 tabelas batch: `indicador_municipio`, `indicador_uf`, `meta_brasil`, `meta_uf`,
-  `meta_municipio`, `alunos` (~3,87M registros), `diretorio_municipio`, `diretorio_uf`
+- 9 tabelas batch: `indicador_municipio`, `indicador_uf`, `meta_brasil`, `meta_uf`,
+  `meta_municipio`, `alunos` (~3,87M registros), `diretorio_municipio`, `diretorio_uf`,
+  `idhm_municipio` (enriquecimento externo — ver seção "Fontes de Dados")
 - 2 tabelas streaming (append-only, uma vez que `pipeline/streaming/04_simulacao_streaming.py`
   roda): `streaming_indicadores`, `streaming_metas`
+- 1 tabela de auditoria (append-only, só existe se algum evento de streaming falhar
+  na validação de schema): `streaming_rejeitados` — guarda o payload bruto e o
+  motivo da rejeição (ver `pipeline/streaming/consumer.py`), em vez de descartar
+  o evento inválido silenciosamente
 
 ### Silver Layer — Dados Tratados
 
@@ -86,7 +95,7 @@ Transformações aplicadas às tabelas batch:
   vintage mais recente publicada
 - Normalização de chaves (`id_municipio`, `sigla_uf`)
 - **Integração das bases**: resultado municipal + diretório (nome/UF/região) +
-  meta municipal → `alfabetizacao_integrado` (uma linha por ano × município)
+  meta municipal + IDHM (2010) → `alfabetizacao_integrado` (uma linha por ano × município)
 - Tratamento de nulos **seletivo**: nulos estruturais (ex.: `proporcao_aluno_nivel_*`
   só existe a partir da vintage 2024; `proficiencia` nula para aluno ausente)
   não são imputados — imputar mediana nesses casos distorceria a distribuição real
@@ -94,11 +103,16 @@ Transformações aplicadas às tabelas batch:
 As tabelas de streaming (`indicador_streaming`, `meta_streaming`) recebem
 limpeza/tipagem equivalente, mas ficam fora da integração — ver nota acima.
 
+`idhm_municipio` (enriquecimento externo) recebe limpeza e validação de domínio
+(IDHM ∈ [0,1]) e entra na integração como LEFT JOIN por `id_municipio` — ver
+"Fontes de Dados" para a fonte e o critério de vintage usado.
+
 ### Gold Layer — Camada Analítica
 
 3 datasets analíticos (dado real) + 1 de monitoramento (dado de streaming):
 - `indicador_alfabetizacao_municipio` — indicador por município/ano, gap vs.
-  meta municipal, gap vs. indicador nacional, faixa de risco
+  meta municipal, gap vs. indicador nacional, faixa de risco, IDHM e seus
+  3 componentes (educação, longevidade, renda) quando disponível
 - `comparacao_metas_resultados` — metas vs. resultados por UF/ano (rede
   Pública), com % de municípios da UF que atingiram sua meta municipal
 - `evolucao_temporal` — série histórica do indicador (Brasil + UF), com
@@ -127,14 +141,45 @@ mais o diretório de referência `br_bd_diretorios_brasil`:
 | `alunos` | Microdados | ano, id_municipio, id_escola, id_aluno | ~3,87M registros individuais de desempenho |
 | `br_bd_diretorios_brasil.municipio` | Diretório | id_municipio | Nome, UF, região de cada município |
 | `br_bd_diretorios_brasil.uf` | Diretório | sigla | Nome e região de cada UF |
+| `atlas_desenvolvimento_humano_municipio` | Enriquecimento externo | ano, Codmun7 | IDHM e componentes (educação/longevidade/renda) por município — censos 1991/2000/2010 |
 
 Não existe uma tabela de resultado nacional própria — a série Brasil na Gold é
 derivada da coluna `taxa_alfabetizacao` já presente em `meta_alfabetizacao_brasil`.
 
-**Dados externos opcionais para enriquecimento (não implementados nesta entrega):**
+### Enriquecimento externo — Atlas do Desenvolvimento Humano (IDHM)
+
+Implementado nesta entrega. Fonte: **Atlas do Desenvolvimento Humano no
+Brasil** (IPEA / PNUD / Fundação João Pinheiro), o mesmo dataset sugerido no
+enunciado, disponível como dataset público no
+[Base dos Dados](https://basedosdados.org/dataset/cbfc7253-089b-44e2-8825-755e1419efc8).
+Sem `GCP_PROJECT_ID` configurado para consultar via BigQuery nesta entrega, os
+dados foram obtidos de uma redistribuição tabular do mesmo dado oficial
+(censos 1991/2000/2010), mantida em
+[github.com/mauriciocramos/IDHM](https://github.com/mauriciocramos/IDHM) —
+mesmo código IBGE de 7 dígitos (`Codmun7`) usado como `id_municipio` no
+restante da pipeline.
+
+- Arquivo: `data/raw/atlas_desenvolvimento_humano_municipio.csv` (16.695
+  linhas — 5.565 municípios × 3 vintagens censitárias)
+- Colunas usadas: `IDHM` (índice geral) e seus 3 componentes — `IDHM_E`
+  (educação), `IDHM_L` (longevidade), `IDHM_R` (renda)
+- **2010 é a vintage de referência** para o enriquecimento — é o último censo
+  demográfico com apuração oficial do IDHM municipal (o índice depende do
+  Censo Demográfico do IBGE, decenal; não há vintage 2020/2022 pública)
+- Entra como enriquecimento **estático** (não varia por ano do indicador de
+  alfabetização) via LEFT JOIN por `id_municipio` em `alfabetizacao_integrado`
+  e na Gold `indicador_alfabetizacao_municipio`
+- Cobertura real obtida: **11.021 de 11.030** registros de
+  `alfabetizacao_integrado` (99,9%) — os municípios sem correspondência são
+  os poucos criados/desmembrados após o Censo 2010
+- Ingestão opcional: se `data/raw/atlas_desenvolvimento_humano_municipio.csv`
+  não existir, a pipeline roda normalmente e essas colunas ficam ausentes —
+  mesmo padrão de fallback gracioso usado nas tabelas de streaming
+
+**Dados externos sugeridos e não implementados nesta entrega** (caminho de
+evolução futura):
 - Censo Escolar (INEP) — infraestrutura escolar
-- IBGE Censo / PNAD — contexto socioeconômico
-- Atlas do Desenvolvimento Humano — IDH municipal
+- IBGE Censo / PNAD — contexto socioeconômico complementar
 - Cadastro Único / Bolsa Família — vulnerabilidade social
 - FUNDEB — financiamento educacional
 
@@ -148,19 +193,23 @@ TechChallenge_2/
 │   ├── batch/
 │   │   ├── config.py                      # TABELAS, REDE_MAP, diretórios, credenciais
 │   │   ├── utils.py                       # logger, I/O Parquet, métricas de qualidade
-│   │   ├── 01_ingestao_bronze.py          # BigQuery com fallback → CSV raw → Bronze
+│   │   ├── 01_ingestao_bronze.py          # BigQuery com fallback → CSV raw → Bronze (+ IDHM externo)
 │   │   ├── 02_processamento_silver.py     # Limpeza, melt de metas, integração → Silver
 │   │   └── 03_agregacao_gold.py           # Agregações Silver → Gold
-│   └── streaming/
-│       ├── producer.py / consumer.py      # Fila em memória ou Kafka real
-│       └── 04_simulacao_streaming.py      # Orquestrador da simulação
+│   ├── streaming/
+│   │   ├── producer.py / consumer.py      # Fila em memória ou Kafka real (+ persiste rejeitados)
+│   │   └── 04_simulacao_streaming.py      # Orquestrador da simulação
+│   └── monitoring/
+│       └── alertas.py                     # disparar_alerta() — log + data/monitoramento/alertas.jsonl
 ├── data/
-│   ├── raw/                               # CSVs exportados (fallback sem GCP) + metadados
+│   ├── raw/                               # CSVs exportados (fallback sem GCP) + metadados + IDHM
 │   ├── bronze/                            # Dados brutos (Parquet) — gerado, não versionado
 │   ├── silver/                            # Dados tratados e integrados — gerado, não versionado
-│   └── gold/                              # Datasets analíticos — gerado, não versionado
+│   ├── gold/                              # Datasets analíticos — gerado, não versionado
+│   └── monitoramento/                     # alertas.jsonl — gerado, não versionado
 ├── quality/
 │   └── validacao_dados.py                 # Regras de qualidade para Bronze/Silver/Gold
+├── tests/                                 # pytest — qualidade, alertas, transformações Silver
 ├── notebooks/
 │   ├── 01_exploracao_dados.ipynb          # Análise exploratória das 8 fontes raw
 │   ├── 02_pipeline_bronze_silver.ipynb    # Transformações, com o caso real de decisão de escopo
@@ -169,6 +218,7 @@ TechChallenge_2/
 │   ├── arquitetura/                       # Diagramas (Mermaid + PNG) e decisões
 │   └── [IAST] - Tech Challenge - Fase 2.pdf  # Enunciado original
 ├── requirements.txt                       # Dependências Python
+├── pytest.ini                             # Configuração dos testes
 └── README.md
 ```
 
@@ -196,14 +246,32 @@ linhagem própria (ver nota em "Arquitetura da Solução"):
   cada execução acrescenta eventos, não substitui os anteriores
 
 ### 3. Qualidade de Dados ([`quality/validacao_dados.py`](quality/validacao_dados.py))
-Valida as 3 camadas (Bronze, Silver, Gold) — 21 tabelas batch sempre, +5 de
-streaming (2 na Bronze, 2 na Silver, 1 na Gold) se `04_simulacao_streaming.py`
-já rodou, 0 alertas na última execução contra os dados reais:
+Valida as 3 camadas (Bronze, Silver, Gold) — 23 tabelas batch sempre (incluindo
+`idhm_municipio`), +5 de streaming (2 na Bronze, 2 na Silver, 1 na Gold) se
+`04_simulacao_streaming.py` já rodou, 0 alertas na última execução contra os
+dados reais (28/28 tabelas OK):
 - Completude (limiar de nulos por coluna, calibrado por tabela — nulos
   estruturais como `proporcao_aluno_nivel_*` pré-2024 não geram alerta)
 - Unicidade (duplicatas na chave primária de cada tabela)
 - Integridade referencial (`sigla_uf` de `alfabetizacao_integrado` contra `diretorio_uf`)
-- Domínio (siglas de UF válidas)
+- Domínio (siglas de UF válidas; `taxa_alfabetizacao` ∈ [0,100]; IDHM e
+  componentes ∈ [0,1] via `verificar_dominio_numerico`)
+
+Cada alerta de qualidade dispara `disparar_alerta()` (ver seção "Monitoramento"),
+não fica só no log de console.
+
+### 4. Testes automatizados ([`tests/`](tests/))
+24 testes `pytest` cobrindo as funções puras da pipeline (não dependem de
+dados reais nem de I/O em disco fora de `tmp_path`):
+- `test_qualidade.py` — as 5 verificações de `quality/validacao_dados.py`
+  (completude, unicidade, domínio de UF, domínio numérico, integridade referencial)
+- `test_alertas.py` — persistência e leitura de `data/monitoramento/alertas.jsonl`
+- `test_silver_transformacoes.py` — padronização de colunas, decodificação de
+  rede, melt de metas (long + vintage mais recente), seleção de rede headline
+
+```bash
+python -m pytest tests/ -v
+```
 
 ---
 
@@ -288,12 +356,13 @@ não detalhada aqui por não ter sido implantada nesta entrega.
 
 ## Aplicação em IA
 
-A camada Gold está preparada para alimentar:
+A camada Gold está preparada para alimentar, já com o enriquecimento
+socioeconômico (IDHM) disponível como feature:
 
-- **Modelos preditivos de alfabetização por município** — prever municípios em risco de não atingir a meta 2030 com base em dados históricos e socioeconômicos
-- **Clusters de vulnerabilidade educacional** — segmentação de municípios por perfil de risco para priorização de políticas públicas
-- **Análise de desigualdade educacional** — identificação de disparidades regionais e fatores determinantes
-- **Políticas públicas baseadas em dados** — simulação de cenários de investimento e impacto no indicador
+- **Modelos preditivos de alfabetização por município** — prever municípios em risco de não atingir a meta 2030, usando IDHM e seus 3 componentes (educação, longevidade, renda) como features socioeconômicas ao lado do histórico do indicador
+- **Clusters de vulnerabilidade educacional** — segmentação de municípios (k-means/hierárquico) cruzando `faixa_risco`, `gap_meta_municipal` e IDHM para priorização de políticas públicas
+- **Análise de desigualdade educacional** — correlação entre `taxa_alfabetizacao` e IDHM por região/UF, identificando se o gap educacional acompanha o gap de desenvolvimento humano ou é um problema à parte
+- **Políticas públicas baseadas em dados** — simulação de cenários de investimento e impacto no indicador, segmentando por faixa de IDHM para direcionar recursos onde o retorno esperado é maior
 
 ---
 
@@ -343,9 +412,19 @@ não existem, e tudo o resto (a análise real) fica intacto.
 python quality/validacao_dados.py
 ```
 
-Valida 21 tabelas batch sempre, +5 de streaming se o passo 3 já rodou.
+Valida 23 tabelas batch sempre (incluindo o enriquecimento IDHM), +5 de streaming se o passo 3 já rodou.
+Alertas de qualidade e falhas de execução ficam persistidos em `data/monitoramento/alertas.jsonl`
+(ver `pipeline/monitoring/alertas.py`), além do log de console.
 
-### 5. Explorar via Notebooks (ordem recomendada)
+### 5. Rodar os Testes
+
+```bash
+python -m pytest tests/ -v
+```
+
+24 testes cobrindo qualidade de dados, alertas e transformações da Silver — não dependem de `data/raw/` nem de execução prévia da pipeline.
+
+### 6. Explorar via Notebooks (ordem recomendada)
 
 ```bash
 jupyter lab
@@ -371,11 +450,23 @@ Mecanismos de observabilidade implementados:
   na Gold: total de eventos, cobertura territorial distinta, janela temporal
   (primeiro/último evento) e eventos/segundo por tópico, derivados do que foi
   de fato persistido (não é só um log efêmero)
+- **Alertas de erro persistidos** — [`pipeline/monitoring/alertas.py`](pipeline/monitoring/alertas.py):
+  `disparar_alerta(nivel, origem, mensagem, contexto)` loga no nível
+  correspondente **e** grava uma linha JSON em `data/monitoramento/alertas.jsonl`
+  (log append-only, consultável depois que a execução termina — diferente do
+  log de console, que se perde ao fechar o terminal). Disparado automaticamente em:
+  - toda falha de ingestão/processamento/agregação (Bronze, Silver, Gold) — `erro="ERROR"` se a tabela é obrigatória, `"WARNING"` se opcional;
+  - toda tabela com alerta de qualidade de dados (`quality/validacao_dados.py`);
+  - taxa de eventos de streaming inválidos acima de zero ao final da execução.
+- **Eventos de streaming inválidos são auditáveis, não descartados** — o
+  consumer grava o payload bruto e o motivo da rejeição em
+  `data/bronze/streaming_rejeitados/` (Parquet append-only) em vez de só
+  logar e perder o dado, permitindo investigar depois por que um produtor
+  enviou um evento incompleto.
 
-**Não implementado nesta entrega** (item opcional do desafio): alertas
-externos (e-mail/Slack/PagerDuty), um dashboard de observabilidade dedicado,
-e contagem persistida de eventos inválidos — o consumer de streaming descarta
-eventos inválidos sem gravá-los (só aparece no log da execução ao vivo, ver
-`pipeline/streaming/consumer.py`). Os logs estruturados e o monitoramento
-persistido já dão rastreabilidade para o volume atual, mas não substituem
-alertas ativos em um cenário de produção real.
+**Não implementado nesta entrega** (item opcional do desafio): integração
+com um canal de alerta externo real (e-mail/Slack/PagerDuty) e um dashboard
+de observabilidade dedicado — o alerta fica persistido em
+`data/monitoramento/alertas.jsonl` para consulta, mas nada dispara uma
+notificação ativa fora da própria execução. Ver também o dashboard analítico
+(seção abaixo) para acompanhamento visual dos dados da Gold.

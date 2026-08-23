@@ -19,6 +19,9 @@ data/gold/**/*.parquet
 # Data — fonte raw grande demais para o GitHub (limite de 100MB/arquivo)
 data/raw/br_inep_avaliacao_alfabetizacao_alunos.csv
 
+# Data — monitoramento (alertas persistidos), gerado pela pipeline
+data/monitoramento/*.jsonl
+
 # Spark
 spark-warehouse/
 derby.log
