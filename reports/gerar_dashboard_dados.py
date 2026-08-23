@@ -164,9 +164,21 @@ def montar_municipio(muni: pd.DataFrame) -> dict:
     linhas_delta = [_linha_delta(idx, row) for idx, row in comparaveis.iterrows()]
     ranking_delta = sorted(linhas_delta, key=lambda l: l["delta"])
 
+    # Municípios que atingiram a própria meta municipal (só existe comparação
+    # para quem tem rede Municipal avaliada E meta municipal definida no ano)
+    com_meta = int(atual["atingiu_meta_municipal"].notna().sum())
+    atingiram_meta = int((atual["atingiu_meta_municipal"] == True).sum())  # noqa: E712
+    pct_atingiram_meta = _num(atingiram_meta / com_meta * 100) if com_meta else None
+
     return {
         "anos": anos,
         "total_municipios_avaliados": int(atual["id_municipio"].nunique()),
+        "meta_municipal": {
+            "ano": int(ano_max),
+            "total_com_meta": com_meta,
+            "atingiram": atingiram_meta,
+            "pct_atingiram": pct_atingiram_meta,
+        },
         "melhores": list(reversed(ranking_atual[-10:])),
         "piores": ranking_atual[:10],
         "mais_melhoraram": list(reversed(ranking_delta[-10:])),

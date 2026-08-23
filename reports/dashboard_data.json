@@ -1,5 +1,5 @@
 {
-  "gerado_em": "2026-08-23T20:43:06.380493+00:00",
+  "gerado_em": "2026-08-23T21:29:00.622595+00:00",
   "brasil": {
     "serie": [
       {
@@ -733,6 +733,12 @@
       2024
     ],
     "total_municipios_avaliados": 5516,
+    "meta_municipal": {
+      "ano": 2024,
+      "total_com_meta": 5232,
+      "atingiram": 2788,
+      "pct_atingiram": 53.29
+    },
     "melhores": [
       {
         "id_municipio": "2211605",

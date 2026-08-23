@@ -461,8 +461,9 @@ e quem mais melhorou/piorou (delta):
 - **Brasil** — indicador nacional vs. trajetória oficial da meta (2023–2030)
 - **UF** — histórico das 5 melhores/piores UFs, ranking do ano mais recente,
   variação UF a UF entre os dois anos disponíveis
-- **Município** — 10 melhores/piores municípios (com faixa de risco e IDHM),
-  10 que mais subiram/caíram no indicador
+- **Município** — quantos atingiram a própria meta municipal (contagem e %),
+  10 melhores/piores municípios (com faixa de risco e IDHM), 10 que mais
+  subiram/caíram no indicador
 - **Aluno** — participação, % alfabetizados e proficiência média histórica,
   distribuição de proficiência (com a linha do ponto de corte 743), recorte
   por rede de ensino, e ranking/delta por UF calculado direto dos microdados
