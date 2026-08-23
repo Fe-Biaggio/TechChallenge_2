@@ -43,7 +43,7 @@ Fontes (BigQuery ou data/raw/*.csv)          Streaming (simulado)         Enriqu
                                        │  melt de metas, integração + IDHM
                                        ▼
                                 ┌──────────────┐
-                                │    SILVER    │  14 tabelas — 11 batch tratadas
+                                │    SILVER    │  13 tabelas — 9 fontes tratadas + integração
                                 └──────┬───────┘  + 2 streaming + 1 IDHM (linhagem própria)
                                        │  agregação analítica
                                        ▼
@@ -220,6 +220,7 @@ TechChallenge_2/
 ├── reports/
 │   ├── dashboard.html                     # Painel analítico — HTML autocontido, gerado
 │   ├── dashboard_template.html            # Template do painel (estrutura/estilo/JS)
+│   ├── dashboard_data.json                # Agregados Gold consumidos pelo painel (gerado)
 │   └── gerar_dashboard_dados.py           # Gold (+ Silver/alunos) → dashboard.html
 ├── requirements.txt                       # Dependências Python
 ├── pytest.ini                             # Configuração dos testes
@@ -235,10 +236,11 @@ pipeline rode via fallback sem precisar de credenciais GCP.
 ## Metodologia
 
 ### 1. Ingestão Batch ([`pipeline/batch/`](pipeline/batch/))
-Processamento sob demanda das 8 tabelas fonte, com fallback automático:
+Processamento sob demanda das 8 tabelas fonte (Base dos Dados) + 1 de
+enriquecimento externo (IDHM), com fallback automático:
 - BigQuery (produção) → CSV local em `data/raw/` se GCP não estiver configurado
 - Metas educacionais (nacional, estadual, municipal), resultado (município/UF),
-  diretórios de referência e microdados de alunos
+  diretórios de referência, microdados de alunos e IDHM municipal
 
 ### 2. Ingestão Streaming ([`pipeline/streaming/`](pipeline/streaming/))
 Simulação de eventos em tempo quase real (fila em memória por padrão, ou Kafka
@@ -290,6 +292,7 @@ python -m pytest tests/ -v
 | Kafka / fila em memória | Streaming | `kafka-python` para Kafka real; fila em memória (`threading.Queue`) por padrão — roda sem infraestrutura externa |
 | Jupyter + matplotlib/seaborn | Notebooks analíticos | Exploração e visualização executadas contra os dados reais da pipeline |
 | python-dotenv | Configuração | Credenciais/parâmetros via `.env`, fora do controle de versão |
+| pytest | Testes automatizados (`tests/`) | Funções puras da pipeline (qualidade, alertas, transformações Silver) testadas isoladamente, sem depender de `data/raw/` |
 
 **Considerados, não usados nesta entrega** (ficam em `requirements.txt` como
 caminho de evolução, não como dependência ativa do código): PySpark/Delta
@@ -347,7 +350,7 @@ não justificou a curva de configuração frente a um validador Python direto
 | Particionamento por `ano` | Consultas a um ano não escaneiam o histórico completo |
 | Processamento local (pandas) em vez de cluster distribuído | Sem custo de cluster gerenciado (EMR/Dataproc/Databricks) nem capacidade ociosa — justificável enquanto o maior dataset (~3,87M linhas) couber em memória de um processo |
 | Fallback CSV para BigQuery | Evita custo de consultas BigQuery repetidas durante desenvolvimento/reexecução — o dado é consultado uma vez e reaproveitado localmente |
-| Camada Gold pré-agregada | Elimina reprocessamento de `alunos` (maior tabela) a cada análise — dashboards e notebooks leem apenas os 3 datasets Gold, já pequenos |
+| Camada Gold pré-agregada | Elimina reprocessamento de `alunos` (maior tabela) na maior parte das análises — as 3 visões de `indicador_alfabetizacao_municipio`/`comparacao_metas_resultados`/`evolucao_temporal` do dashboard leem só a Gold, já pequena. A visão "Aluno" é a exceção deliberada: agrega direto da Silver (não há rollup de aluno pronto na Gold) — mas roda uma vez em `gerar_dashboard_dados.py`, não a cada carregamento da página |
 
 **Estimativa de custo mensal:** com o volume atual (~415MB, execução sob
 demanda), o caminho BigQuery fica dentro do tier gratuito do Google Cloud
@@ -438,6 +441,14 @@ jupyter lab
 2. [`notebooks/02_pipeline_bronze_silver.ipynb`](notebooks/02_pipeline_bronze_silver.ipynb)
 3. [`notebooks/03_camada_gold_analytics.ipynb`](notebooks/03_camada_gold_analytics.ipynb)
 
+### 7. Gerar o Dashboard Analítico
+
+```bash
+python reports/gerar_dashboard_dados.py
+```
+
+Abra [`reports/dashboard.html`](reports/dashboard.html) direto no navegador — ver seção "Dashboard Analítico" abaixo.
+
 ---
 
 ## Dashboard Analítico
@@ -496,7 +507,9 @@ Mecanismos de observabilidade implementados:
 
 **Não implementado nesta entrega** (item opcional do desafio): integração
 com um canal de alerta externo real (e-mail/Slack/PagerDuty) e um dashboard
-de observabilidade dedicado — o alerta fica persistido em
-`data/monitoramento/alertas.jsonl` para consulta, mas nada dispara uma
-notificação ativa fora da própria execução. Ver também o dashboard analítico
-(seção abaixo) para acompanhamento visual dos dados da Gold.
+de **observabilidade operacional** (que visualizasse `alertas.jsonl` e
+`monitoramento_streaming` como painel de saúde da pipeline) — hoje esses dados
+ficam persistidos e consultáveis, mas só via log/arquivo, sem visualização
+dedicada. O [dashboard analítico](reports/dashboard.html) (seção abaixo) é um
+painel diferente: cobre o **resultado educacional** (indicador, rankings,
+metas) a partir da Gold, não a saúde operacional da pipeline.
