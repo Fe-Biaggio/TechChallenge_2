@@ -30,7 +30,7 @@ flowchart TD
 
     subgraph SilverL["Silver — limpeza e integração"]
         SV["02_processamento_silver.py"]
-        SVT[("11 tabelas batch tratadas +\nalfabetizacao_integrado (com IDHM)")]
+        SVT[("10 tabelas batch tratadas +\nalfabetizacao_integrado (com IDHM)")]
         SVS[("indicador_streaming\nmeta_streaming\n(linhagem separada)")]
     end
 
