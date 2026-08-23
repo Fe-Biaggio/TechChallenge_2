@@ -146,6 +146,41 @@ mais o diretório de referência `br_bd_diretorios_brasil`:
 Não existe uma tabela de resultado nacional própria — a série Brasil na Gold é
 derivada da coluna `taxa_alfabetizacao` já presente em `meta_alfabetizacao_brasil`.
 
+### Limitação de dados — dicionário oficial indisponível
+
+O dataset `br_inep_avaliacao_alfabetizacao` disponibiliza, no Base dos Dados,
+uma tabela `dicionario` que traduziria oficialmente os códigos usados nas
+demais tabelas — mas ela só é consultável via BigQuery, que exige projeto GCP
+com faturamento ativo (indisponível nesta entrega, ver "BigQuery com fallback
+para CSV" em Decisões Arquiteturais). O [link de download do
+dicionário](https://basedosdados.org/api/tables/downloadTable?p=YnJfaW5lcF9hdmFsaWFjYW9fYWxmYWJldGl6YWNhbw==&q=ZGljaW9uYXJpbw==&d=ZmFsc2U=&s=)
+também não pôde ser usado neste ambiente.
+
+Sem o dicionário oficial, o significado das colunas abaixo foi **inferido** —
+por convenção do INEP, pelo contexto do desafio e por validação empírica
+cruzada com outras colunas — e não confirmado pela fonte oficial:
+
+| Coluna | Valores brutos | Inferência | Base da inferência |
+|---|---|---|---|
+| `rede` | 0, 1, 2, 3, 4, 5 | Total, Federal, Estadual, Municipal, Privada, Pública (`REDE_MAP` em `config.py`) | Convenção padrão do INEP; `alunos` só traz 2/3/4 (redes reais por aluno), enquanto `indicador_municipio`/`indicador_uf` também trazem 0/5 — consistente com 0/5 sendo agregados, não redes reais |
+| `serie` | sempre `2` | 2º ano do ensino fundamental | Contexto do desafio (o Compromisso Nacional mede alfabetização ao final do 2º ano); não há outro valor na base para comparar |
+| `presenca` | 0 / 1 | Aluno ausente / presente na aplicação | `proficiencia` é 100% nula quando `presenca=0` e só 0,04% nula quando `presenca=1` — consistente com "ausente" |
+| `preenchimento_caderno` | 0 / 1 | Caderno de prova não preenchido / preenchido | Mesmo padrão de `presenca`: `proficiencia` é 100% nula quando `preenchimento_caderno=0` |
+| `alfabetizado` | 0 / 1 | Não atingiu / atingiu o ponto de corte de 743 pontos | Validado empiricamente contra `proficiencia`: **0 de 3.354.661** registros com proficiência preenchida contradizem o corte de 743 |
+
+**Atenção ao usar `alfabetizado` como feature**: dos alunos com
+`alfabetizado=0`, 513.338 (~13% da base de 3,87M) não têm `proficiencia`
+registrada — ou seja, `alfabetizado=0` mistura "avaliado e abaixo do corte"
+com "não avaliado" (mesmo código para os dois casos). Qualquer análise ou
+modelo que use esse campo diretamente deve filtrar por `presenca=True`
+primeiro — é exatamente por isso que `transformar_alunos()` em
+`pipeline/batch/02_processamento_silver.py` não imputa `proficiencia` ausente
+como se fosse zero ou mediana.
+
+Se o acesso ao BigQuery for configurado no futuro (`GCP_PROJECT_ID` no
+`.env`), a tabela `dicionario` deveria ser consultada para confirmar (ou
+corrigir) essas inferências antes de qualquer uso em produção.
+
 ### Enriquecimento externo — Atlas do Desenvolvimento Humano (IDHM)
 
 Implementado nesta entrega. Fonte: **Atlas do Desenvolvimento Humano no
