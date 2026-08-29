@@ -572,6 +572,20 @@ Para regenerar após atualizar o dashboard:
 python reports/presentation/gerar_apresentacao.py
 ```
 
+## Vídeo Executivo
+
+[`reports/presentation/TechChallenge_2_Apresentacao.mp4`](reports/presentation/TechChallenge_2_Apresentacao.mp4) —
+vídeo de até 5 minutos pedido no desafio, com um integrante apresentando o
+projeto em linguagem executiva (simulando uma apresentação para liderança/
+stakeholders), apoiado nos slides de
+[`Alfabetizacao_Apresentacao.pptx`](reports/presentation/Alfabetizacao_Apresentacao.pptx)
+acima. Aborda os 4 pontos pedidos no desafio:
+
+- Problema de negócio
+- Arquitetura da solução
+- Valor da pipeline para análises educacionais
+- Potencial uso para inteligência artificial
+
 ## Monitoramento da Pipeline
 
 Mecanismos de observabilidade implementados:
