@@ -22,6 +22,9 @@ data/raw/br_inep_avaliacao_alfabetizacao_alunos.csv
 # Data — monitoramento (alertas persistidos), gerado pela pipeline
 data/monitoramento/*.jsonl
 
+# Data — Gold que reprovou no gate de qualidade (pipeline/executar_pipeline.py)
+data/gold_rejeitada/
+
 # Spark
 spark-warehouse/
 derby.log

@@ -252,6 +252,7 @@ evolução futura):
 ```
 TechChallenge_2/
 ├── pipeline/
+│   ├── executar_pipeline.py               # Orquestrador: Bronze->Silver->Gold com gate de qualidade
 │   ├── batch/
 │   │   ├── config.py                      # TABELAS, REDE_MAP, diretórios, credenciais
 │   │   ├── utils.py                       # logger, I/O Parquet, métricas de qualidade
@@ -268,6 +269,7 @@ TechChallenge_2/
 │   ├── bronze/                            # Dados brutos (Parquet) — gerado, não versionado
 │   ├── silver/                            # Dados tratados e integrados — gerado, não versionado
 │   ├── gold/                              # Datasets analíticos — gerado, não versionado
+│   ├── gold_rejeitada/                    # Gold que reprovou no gate — gerado, não versionado
 │   └── monitoramento/                     # alertas.jsonl — gerado, não versionado
 ├── quality/
 │   └── validacao_dados.py                 # Regras de qualidade para Bronze/Silver/Gold
@@ -330,6 +332,32 @@ dados reais (28/28 tabelas OK):
 
 Cada alerta de qualidade dispara `disparar_alerta()` (ver seção "Monitoramento"),
 não fica só no log de console.
+
+**Importante — isto por si só não bloqueia nada.** Rodado como script
+separado (como nos passos 2 e 4 de "Como Reproduzir"), `quality/validacao_dados.py`
+só reporta: a Gold já foi escrita e já está disponível em `data/gold/` quando
+a validação roda. Quem precisa de um gate de verdade — nenhuma Gold reprovada
+disponível para consumo — usa [`pipeline/executar_pipeline.py`](pipeline/executar_pipeline.py)
+(seção seguinte) em vez de rodar 01/02/03 manualmente.
+
+### 3.1. Gate de qualidade ([`pipeline/executar_pipeline.py`](pipeline/executar_pipeline.py))
+
+Orquestra Bronze → Silver → Gold e só publica a Gold em `data/gold/` se todas
+as camadas passarem na validação:
+
+1. Roda Bronze; valida Bronze — para antes de construir Silver se houver alerta
+2. Roda Silver; valida Silver — para antes de construir Gold se houver alerta
+3. Roda Gold; valida Gold — se houver alerta, **move tudo que acabou de ser
+   gerado para `data/gold_rejeitada/<timestamp>/`** e encerra com código de
+   saída ≠ 0. `data/gold/` nunca fica com dado que não passou no gate.
+
+```bash
+python pipeline/executar_pipeline.py
+```
+
+Testado nos dois sentidos: rodando limpo (Gold publicada, código 0) e com uma
+regra de qualidade forçada a falhar (Gold movida para `gold_rejeitada/`,
+`data/gold/` fica vazia, código 1) — ver histórico de commits.
 
 ### 4. Testes automatizados ([`tests/`](tests/))
 24 testes `pytest` cobrindo as funções puras da pipeline (não dependem de
@@ -417,12 +445,61 @@ não justificou a curva de configuração frente a um validador Python direto
 | Fallback CSV para BigQuery | Evita custo de consultas BigQuery repetidas durante desenvolvimento/reexecução — o dado é consultado uma vez e reaproveitado localmente |
 | Camada Gold pré-agregada | Elimina reprocessamento de `alunos` (maior tabela) na maior parte das análises — as 3 visões de `indicador_alfabetizacao_municipio`/`comparacao_metas_resultados`/`evolucao_temporal` do dashboard leem só a Gold, já pequena. A visão "Aluno" é a exceção deliberada: agrega direto da Silver (não há rollup de aluno pronto na Gold) — mas roda uma vez em `gerar_dashboard_dados.py`, não a cada carregamento da página |
 
-**Estimativa de custo mensal:** com o volume atual (~415MB, execução sob
-demanda), o caminho BigQuery fica dentro do tier gratuito do Google Cloud
-(1TB de consultas/mês) para uso educacional/piloto; o caminho CSV tem custo
-de armazenamento desprezível. Uma estimativa de cloud própria (compute +
-storage gerenciado) depende do provedor e do volume de produção escolhidos —
-não detalhada aqui por não ter sido implantada nesta entrega.
+### Estimativa de custo mensal (projeção — nenhuma infraestrutura foi provisionada nesta entrega)
+
+Cruza os números medidos da pipeline (volume real por camada, tempo de
+execução real) com o preço público de lista do Google Cloud (mesmo provedor
+já referenciado no caminho de ingestão via BigQuery), consultado em
+outubro/2026. É explicitamente uma projeção, não uma fatura real.
+
+**1. Preço unitário por serviço:**
+
+| Serviço | Unidade | Quantidade medida | Preço unitário (lista) |
+|---|---|---|---|
+| Cloud Storage Standard (us-central1) | GB-mês | 0,41 GB — raw (219MB) + bronze (101MB) + silver (97MB) + gold (0,5MB) armazenados juntos | $0,020/GB-mês¹ |
+| Cloud Run (CPU só durante a requisição) | vCPU-segundo | 78 vCPU-s/execução — 39s medidos × 2 vCPU alocados | $0,000024/vCPU-s² |
+| Cloud Run (memória) | GiB-segundo | 156 GiB-s/execução — 39s medidos × 4 GiB alocados | $0,0000025/GiB-s² |
+| BigQuery on-demand | TiB escaneado | ~0,0002 TiB/execução — `SELECT *` nas 8 tabelas batch ≈ volume do raw (219MB) | $6,25/TiB³ |
+
+**2. Custo mensal projetado por cadência** (armazenamento é constante — não
+depende de quantas vezes a pipeline roda; processamento e consulta escalam
+com a cadência):
+
+| Cadência | Execuções/mês | Processamento (lista) | Consulta BigQuery (lista) | + Armazenamento | **Total projetado (lista)** | Total real (com free tier)⁴ |
+|---|---|---|---|---|---|---|
+| Diária (pior caso, não recomendada) | ~30 | $0,0679 | $0,0392 | $0,0082 | **$0,1153** | ~$0,0082 (só armazenamento) |
+| Mensal (cenário ingênuo — default comum sem olhar a fonte) | 1 | $0,0023 | $0,0013 | $0,0082 | **$0,0118** | ~$0,0082 (só armazenamento) |
+| **Anual (recomendada — acompanha o ciclo de publicação do INEP, ver "Frequência de atualização da fonte")** | 1/12 | $0,0002 | $0,0001 | $0,0082 | **$0,0085** | ~$0,0082 (só armazenamento) |
+
+O número chama atenção pelo tamanho, não pela precisão: no volume atual
+(centenas de MB, execução em segundos), o custo de nuvem projetado é
+irrelevante em qualquer uma das três cadências — inclusive a diária, que
+ninguém está recomendando. Isso **não invalida a análise de FinOps, é o
+resultado dela**: a decisão de arquitetura certa neste estágio não é
+otimizar um valor em dólares que já nasce perto de zero, é não contratar
+capacidade que essa carga não precisa (cluster gerenciado sempre ligado,
+Kafka provisionado) — exatamente o argumento da seção "Custo vs Performance"
+acima, agora com número em vez de só intuição. Isso muda na mesma proporção
+em que o volume crescer: se `alunos` passar de milhões para centenas de
+milhões de linhas (todos os anos/UFs do histórico completo do INEP, por
+exemplo), tanto o argumento de "cabe em memória" quanto esta projeção de
+custo deixam de valer e precisam ser refeitos — ver nota na seção acima.
+
+Cadência mensal x anual: mesmo com os dois cenários custando frações de
+centavo hoje, a diferença (~28% menor na cadência anual) é a mesma lógica
+que, em um volume de produção real (GB/TB em vez de MB), separa uma conta de
+nuvem razoável de uma inflada por reprocessar um dado que a fonte não
+atualizou.
+
+¹ [Google Cloud Storage Pricing 2026 — CloudZero](https://www.cloudzero.com/blog/gcp-storage-pricing/)
+² [Cloud Run Functions Pricing 2026 — nOps](https://www.nops.io/blog/cloud-run-functions-pricing/)
+³ [BigQuery Pricing — On-Demand $6.25/TiB Scanned](https://www.stackscored.com/pricing/data-warehouse/bigquery/)
+⁴ Cloud Run: 180.000 vCPU-s + 360.000 GiB-s/mês grátis — até a cadência diária
+(2.340 vCPU-s/mês) fica ~77× abaixo do limite. BigQuery: 1 TiB de consulta
+grátis/mês — a cadência diária (~6,3GB/mês escaneados) fica ~160× abaixo do
+limite. Armazenamento é o único item sem free tier generoso o bastante para
+zerar com segurança neste cálculo, por isso é a única linha com custo real
+projetado (fração de centavo) nos três cenários.
 
 ---
 
@@ -453,6 +530,16 @@ Project ID do GCP, não o Billing Account ID da conta de faturamento (ver
 comentário em `.env.example`).
 
 ### 2. Executar o Pipeline Batch
+
+**Recomendado** — com gate de qualidade (não publica Gold reprovada):
+
+```bash
+python pipeline/executar_pipeline.py
+```
+
+Alternativa — rodar as camadas manualmente, sem gate (útil para depurar uma
+camada isolada; nada impede consumir uma Gold que `quality/validacao_dados.py`
+reprovaria se você rodasse o passo 4 depois):
 
 ```bash
 python pipeline/batch/01_ingestao_bronze.py
